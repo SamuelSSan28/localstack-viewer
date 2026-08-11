@@ -43,7 +43,7 @@ h3 { margin: 16px 0 5px; font-size: 14px; }
 .badge { align-self: start; padding: 5px 8px; border-radius: 20px; color: #1b996d; background: #e3f8ef; font-size: 9px; font-weight: 700; }
 .badge.off { color: #c65e5e; background: #fceaea; }
 .card p, .card small { margin: 0; color: #8d97a9; font-size: 11px; }
-.dynamo-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: 570px; overflow: hidden; border: 1px solid #e2e7ee; border-radius: 13px; background: #fff; }
+.dynamo-layout { display: grid; grid-template-columns: 273px minmax(0, 1fr); min-height: 570px; overflow: hidden; border: 1px solid #e2e7ee; border-radius: 13px; background: #fff; }
 .table-list { padding: 15px 11px; border-right: 1px solid #e8ecf2; background: #fafbfc; }
 .table-list > label { margin-top: 7px; }
 .table-search, .item-filter { display: flex; align-items: center; border: 1px solid #dfe4ec; border-radius: 8px; background: #fff; }
