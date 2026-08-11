@@ -18,3 +18,16 @@ test('documents configurable variables in an example file', async () => {
   assert.match(environment, /^AWS_DEFAULT_REGION=/m);
   assert.match(environment, /^VIEWER_PORT=/m);
 });
+
+test('uses port 8888 as the default viewer port', async () => {
+  const [compose, dockerfile, environment] = await Promise.all([
+    readFile(new URL('../docker-compose.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../Dockerfile', import.meta.url), 'utf8'),
+    readFile(new URL('../.env.example', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(compose, /\$\{VIEWER_PORT:-8888\}:8888/);
+  assert.match(dockerfile, /^ENV NODE_ENV=production PORT=8888$/m);
+  assert.match(dockerfile, /^EXPOSE 8888$/m);
+  assert.match(environment, /^VIEWER_PORT=8888$/m);
+});

@@ -21,7 +21,7 @@ This project is only a **viewer**. It does not create, configure, or manage Loca
 docker compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000). By default, the container reaches LocalStack on the host through `http://host.docker.internal:4566`.
+Open [http://localhost:8888](http://localhost:8888). By default, the container reaches LocalStack on the host through `http://host.docker.internal:4566`.
 
 To use a LocalStack instance on another host or Docker network:
 
@@ -50,7 +50,7 @@ The repository owner is **[`SamuelSSan28`](https://github.com/SamuelSSan28)**. G
 ```bash
 docker pull ghcr.io/samuelssan28/localstack-viewer:latest
 
-docker run --rm -p 3000:3000 \
+docker run --rm -p 8888:8888 \
   --add-host=host.docker.internal:host-gateway \
   -e LOCALSTACK_ENDPOINT=http://host.docker.internal:4566 \
   -e AWS_DEFAULT_REGION=us-east-1 \
@@ -103,13 +103,13 @@ Runtime variables are provided when the container starts; they are not publishin
 | --- | --- | --- |
 | `LOCALSTACK_ENDPOINT` | `http://localhost:4566` in Node; `http://host.docker.internal:4566` in Compose | Full endpoint of the existing LocalStack instance. |
 | `AWS_DEFAULT_REGION` | `us-east-1` | Region queried and displayed by the viewer. |
-| `PORT` | `3000` | Internal HTTP port of the Node process. |
-| `VIEWER_PORT` | `3000` | Host port published by Docker Compose. |
+| `PORT` | `8888` | Internal HTTP port of the Node process. |
+| `VIEWER_PORT` | `8888` | Host port published by Docker Compose. |
 
 Example with a remote LocalStack endpoint and a different viewer port:
 
 ```bash
-LOCALSTACK_ENDPOINT=http://192.168.1.50:4566 VIEWER_PORT=8080 docker compose up -d
+LOCALSTACK_ENDPOINT=http://192.168.1.50:4566 VIEWER_PORT=9090 docker compose up -d
 ```
 
 ## Local development
