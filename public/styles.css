@@ -94,9 +94,10 @@ td code { color: #354158; font: 11px ui-monospace, monospace; }
 .filter-empty { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 35px; color: #9ba4b5; font-size: 11px; text-align: center; }
 .copy-cell { cursor: copy; }
 .copy-cell:hover { background: #f0edfd; outline: 1px solid #d9d1f8; outline-offset: -1px; }
-.actions { position: sticky; right: 0; width: 164px; min-width: 164px; white-space: nowrap; background: #fff; box-shadow: -8px 0 14px #17233c0a; }
+.actions { position: sticky; right: 0; width: 78px; min-width: 78px; white-space: nowrap; background: #fff; box-shadow: -8px 0 14px #17233c0a; }
 .actions-head { z-index: 2; background: #f8f9fb; }
-.actions .row-action { padding: 5px 7px; border: 0; border-radius: 5px; color: #758096; background: none; font-size: 10px; font-weight: 600; }
+.actions .row-action { display: inline-grid; width: 28px; height: 28px; padding: 5px; place-items: center; border: 0; border-radius: 5px; color: #758096; background: none; }
+.actions .row-action svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .actions .row-action:hover { color: #684bd9; background: #f0edfd; }
 .actions .delete-action:hover { color: #c45a5a; background: #fff0f0; }
 .icon-button { border: 0; background: none; color: #758096; font-size: 17px; }
