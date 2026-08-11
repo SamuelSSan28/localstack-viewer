@@ -36,32 +36,32 @@ You may also copy `.env.example` to `.env` and edit the endpoint. The Compose fi
 The repository name is **`localstack-viewer`**. Its GHCR image name is generated from the GitHub account or organization that owns the repository:
 
 ```text
-ghcr.io/<repository-owner>/localstack-viewer:latest
+ghcr.io/samuelssan28/localstack-viewer:latest
 ```
 
-> The checkout provided to this environment has no Git remote configured, so the GitHub owner name is not available in repository metadata and cannot be written safely without guessing it. Once this repository is pushed, the workflow uses `${{ github.repository }}` and publishes under the correct owner automatically.
+> The repository owner is **`SamuelSSan28`**. The workflow uses `${{ github.repository }}` and automatically publishes the lowercase GHCR path `samuelssan28/localstack-viewer`.
 
 The exact image URL is visible on the repository's **Packages** page and in the **Generate image tags and labels** step of the Docker workflow.
 
 ### Pull and run
 
-Replace `<repository-owner>` with the GitHub user or organization shown in the repository URL:
+The repository owner is **[`SamuelSSan28`](https://github.com/SamuelSSan28)**. GHCR image paths are lowercase, so the published image uses `samuelssan28`:
 
 ```bash
-docker pull ghcr.io/<repository-owner>/localstack-viewer:latest
+docker pull ghcr.io/samuelssan28/localstack-viewer:latest
 
 docker run --rm -p 3000:3000 \
   --add-host=host.docker.internal:host-gateway \
   -e LOCALSTACK_ENDPOINT=http://host.docker.internal:4566 \
   -e AWS_DEFAULT_REGION=us-east-1 \
-  ghcr.io/<repository-owner>/localstack-viewer:latest
+  ghcr.io/samuelssan28/localstack-viewer:latest
 ```
 
 For a private package, authenticate before pulling:
 
 ```bash
-echo "$GHCR_TOKEN" | docker login ghcr.io -u <repository-owner> --password-stdin
-docker pull ghcr.io/<repository-owner>/localstack-viewer:latest
+echo "$GHCR_TOKEN" | docker login ghcr.io -u SamuelSSan28 --password-stdin
+docker pull ghcr.io/samuelssan28/localstack-viewer:latest
 ```
 
 The token used for pulling a private image needs `read:packages`. A public package can be pulled without logging in.
@@ -80,7 +80,7 @@ No repository variable or manually-created secret is required for publishing to 
 | Workflow value | Source | Value |
 | --- | --- | --- |
 | `REGISTRY` | Workflow environment | `ghcr.io` |
-| `IMAGE_NAME` | `${{ github.repository }}` | `owner/localstack-viewer` |
+| `IMAGE_NAME` | `${{ github.repository }}` | `SamuelSSan28/localstack-viewer` (normalized to lowercase by the Docker metadata action) |
 | `github.actor` | GitHub Actions context | User that started the workflow |
 | `secrets.GITHUB_TOKEN` | Automatically created by Actions | Temporary package publishing token |
 
