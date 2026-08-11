@@ -8,6 +8,11 @@ test('places DynamoDB keys first and sorts remaining fields alphabetically', () 
   assert.deepEqual(orderedFieldNames(items, ['partitionKey', 'sortKey']), ['partitionKey', 'sortKey', 'alpha', 'zebra']);
 });
 
+test('places pinned fields after DynamoDB keys in the order they were pinned', () => {
+  const items = [{ zebra: 1, status: 2, sortKey: 3, name: 4, partitionKey: 5 }];
+  assert.deepEqual(orderedFieldNames(items, ['partitionKey', 'sortKey'], ['status', 'name']), ['partitionKey', 'sortKey', 'status', 'name', 'zebra']);
+});
+
 test('orders JSON keys first at the root and alphabetically in nested objects', () => {
   const value = { zebra: 1, partitionKey: 'key', details: { zebra: 2, alpha: 1 }, list: [{ beta: 2, alpha: 1 }] };
   assert.deepEqual(Object.keys(orderJsonValue(value, ['partitionKey'])), ['partitionKey', 'details', 'list', 'zebra']);
@@ -61,6 +66,14 @@ test('offers compact, accessible row actions and clipboard controls', async () =
 test('marks key columns with an accessible star', async () => {
   const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
   assert.match(view, /class="key-attribute" title="Key attribute" aria-label="Key attribute">★/);
+});
+
+test('offers an accessible pin control for non-key fields', async () => {
+  const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
+  assert.match(view, /data-pin-field=.*Pin field after key columns/);
+  assert.match(view, /state\.pinnedFields\[tableName\]/);
+  assert.match(css, /\.pin-field\.pinned/);
 });
 
 test('copies the complete value represented by one cell', () => {
