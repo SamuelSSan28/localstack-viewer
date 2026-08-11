@@ -77,6 +77,8 @@ h3 { margin: 16px 0 5px; font-size: 14px; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th { padding: 11px 14px; background: #f8f9fb; color: #7c879a; font-size: 9px; letter-spacing: .8px; text-align: left; text-transform: uppercase; }
 td { max-width: 260px; padding: 12px 14px; overflow: hidden; border-top: 1px solid #edf0f4; text-overflow: ellipsis; white-space: nowrap; }
+tbody tr { transition: background .15s; cursor: pointer; }
+tbody tr:hover { background: #faf9ff; }
 td code { color: #354158; font: 11px ui-monospace, monospace; }
 .select-cell { width: 38px; padding-right: 3px; text-align: center; }
 .select-cell input { width: 14px; height: 14px; accent-color: #684bd9; cursor: pointer; }
@@ -104,8 +106,11 @@ td code { color: #354158; font: 11px ui-monospace, monospace; }
 dialog { width: min(620px, calc(100% - 30px)); padding: 25px; border: 0; border-radius: 13px; color: #17233c; box-shadow: 0 20px 60px #17233c3d; }
 dialog::backdrop { background: #17233c80; backdrop-filter: blur(2px); }
 .dialog-head { display: flex; justify-content: space-between; margin-bottom: 20px; }
+.dialog-x { align-self: flex-start; font-size: 24px; }
 dialog label { display: block; margin-bottom: 7px; font-size: 11px; font-weight: 700; }
 textarea { width: 100%; min-height: 290px; resize: vertical; padding: 15px; border: 1px solid #dce2ea; border-radius: 8px; outline-color: #684bd9; font: 12px/1.5 ui-monospace, monospace; }
+.json-preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; color: #667187; font-size: 11px; font-weight: 700; }
+.item-json-preview { min-height: 290px; max-height: 55vh; margin: 0; overflow: auto; padding: 18px; border: 1px solid #252f43; border-radius: 8px; color: #d9e3f7; background: #111827; font: 12px/1.65 ui-monospace, SFMono-Regular, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .hint { color: #8d97a9; font-size: 10px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .toast { position: fixed; right: 25px; bottom: 25px; z-index: 10; padding: 12px 18px; border-radius: 9px; color: #fff; background: #239a70; opacity: 0; transform: translateY(10px); pointer-events: none; transition: .2s; font-size: 12px; box-shadow: 0 8px 22px #17233c35; }

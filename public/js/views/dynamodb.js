@@ -6,6 +6,8 @@ let currentTable = '';
 let tableData;
 let editingSchema = {};
 let editingTable = '';
+let editingItem = {};
+let editingExistingItem = false;
 let loadGeneration = 0;
 let selectedRows = new Set();
 let state = readState();
@@ -55,11 +57,26 @@ function renderAttribute(value, type) {
   return `${label}<code class="value-${escapeHtml(type)}">${escapeHtml(value ?? '—')}</code>`;
 }
 
-function openEditor(container, tableName, item = {}, schema = {}) {
+function setEditorMode(container, mode) {
+  const isEditing = mode === 'edit';
+  container.querySelector('#editor-view').hidden = isEditing;
+  container.querySelector('#editor-edit').hidden = !isEditing;
+  container.querySelector('#edit-item').hidden = isEditing;
+  container.querySelector('#save-item').hidden = !isEditing;
+  container.querySelector('#back-to-view').hidden = !isEditing || !editingExistingItem;
+  container.querySelector('#editor-close').textContent = isEditing && !editingExistingItem ? 'Cancel' : 'Close';
+  if (isEditing) container.querySelector('#item-json').focus();
+}
+
+function openEditor(container, tableName, item = {}, schema = {}, mode = 'edit') {
   editingTable = tableName;
   editingSchema = schema;
-  container.querySelector('#editor-title').textContent = Object.keys(item).length ? 'Edit item' : 'New item';
+  editingItem = item;
+  editingExistingItem = Object.keys(item).length > 0;
+  container.querySelector('#editor-title').textContent = editingExistingItem ? 'Item details' : 'New item';
   container.querySelector('#item-json').value = JSON.stringify(item, null, 2);
+  container.querySelector('#item-json-preview').textContent = JSON.stringify(item, null, 2);
+  setEditorMode(container, mode);
   container.querySelector('#editor').showModal();
 }
 
@@ -104,7 +121,12 @@ function renderItems(container, tableName) {
   const selectAll = area.querySelector('#select-all');
   if (selectAll) selectAll.onchange = (event) => { visibleIndices.forEach((index) => event.target.checked ? selectedRows.add(index) : selectedRows.delete(index)); renderItems(container, tableName); };
   area.querySelectorAll('[data-select]').forEach((checkbox) => checkbox.onchange = () => { const index = Number(checkbox.dataset.select); checkbox.checked ? selectedRows.add(index) : selectedRows.delete(index); renderItems(container, tableName); });
-  area.querySelectorAll('[data-edit]').forEach((button) => button.onclick = () => openEditor(container, tableName, tableData.items[button.dataset.edit], tableData.schemas[button.dataset.edit]));
+  area.querySelectorAll('tbody tr').forEach((row) => row.onclick = (event) => {
+    if (event.target.closest('button, input, details, a')) return;
+    const index = Number(row.querySelector('[data-select]').dataset.select);
+    openEditor(container, tableName, tableData.items[index], tableData.schemas[index], 'view');
+  });
+  area.querySelectorAll('[data-edit]').forEach((button) => button.onclick = () => openEditor(container, tableName, tableData.items[button.dataset.edit], tableData.schemas[button.dataset.edit], 'edit'));
   area.querySelectorAll('[data-delete]').forEach((button) => button.onclick = () => deleteRows(container, tableName, [Number(button.dataset.delete)]));
 }
 
@@ -152,13 +174,25 @@ export async function renderDynamo(container) {
     const { tables } = await api.tables();
     currentTable = tables.includes(state.selectedTable) ? state.selectedTable : sortedTables(tables)[0] || '';
     container.innerHTML = `<div class="page-head"><div><span class="eyebrow">DATABASE</span><h1>DynamoDB</h1><p>Inspect and manage items in a dedicated workspace for each table.</p></div></div><section class="dynamo-layout"><aside class="table-list"><label>TABLES</label><div class="table-search"><span>⌕</span><input id="table-search" type="search" placeholder="Search tables…" value="${escapeHtml(state.tableSearch)}" aria-label="Search tables"></div><div id="table-options"></div></aside><div id="table-content"><div class="empty"><b>Select a table</b></div></div></section>
-      <dialog id="editor"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">DYNAMODB</span><h2 id="editor-title">New item</h2></div><button class="icon-button" value="cancel">×</button></div><label for="item-json">JSON item</label><textarea id="item-json" spellcheck="false"></textarea><p class="hint">JSON values are automatically converted to DynamoDB types.</p><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button primary" id="save-item" value="default">Save item</button></div></form></dialog>`;
+      <dialog id="editor"><div class="dialog-head"><div><span class="eyebrow">DYNAMODB</span><h2 id="editor-title">Item details</h2></div><button class="icon-button dialog-x" id="dialog-x" aria-label="Close">×</button></div><div id="editor-view"><div class="json-preview-head"><span>JSON item</span><button class="button secondary" id="edit-item">✎ Edit</button></div><pre class="item-json-preview" id="item-json-preview"></pre></div><div id="editor-edit" hidden><label for="item-json">JSON item</label><textarea id="item-json" spellcheck="false"></textarea><p class="hint">JSON values are automatically converted to DynamoDB types.</p></div><div class="dialog-actions"><button class="button secondary" id="back-to-view" hidden>Back to view</button><button class="button secondary" id="editor-close">Close</button><button class="button primary" id="save-item" hidden>Save item</button></div></dialog>`;
     renderTableList(container, tables);
     container.querySelector('#table-search').oninput = (event) => { state.tableSearch = event.target.value; saveState(); renderTableList(container, tables); };
-    container.querySelector('#editor').addEventListener('close', async (event) => {
-      if (event.target.returnValue !== 'default') return;
-      try { await api.saveItem(editingTable, JSON.parse(container.querySelector('#item-json').value), editingSchema); setStatus('Item saved'); await loadItems(container, editingTable); } catch (error) { setStatus(error.message, 'error'); }
-    });
+    const editor = container.querySelector('#editor');
+    container.querySelector('#dialog-x').onclick = () => editor.close();
+    container.querySelector('#editor-close').onclick = () => editor.close();
+    container.querySelector('#edit-item').onclick = () => setEditorMode(container, 'edit');
+    container.querySelector('#back-to-view').onclick = () => {
+      container.querySelector('#item-json').value = JSON.stringify(editingItem, null, 2);
+      setEditorMode(container, 'view');
+    };
+    container.querySelector('#save-item').onclick = async () => {
+      try {
+        await api.saveItem(editingTable, JSON.parse(container.querySelector('#item-json').value), editingSchema);
+        editor.close();
+        setStatus('Item saved');
+        await loadItems(container, editingTable);
+      } catch (error) { setStatus(error.message, 'error'); }
+    };
     if (currentTable) loadItems(container, currentTable);
   } catch (error) { showError(container, error); }
 }
