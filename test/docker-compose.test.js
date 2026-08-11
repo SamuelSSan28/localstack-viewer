@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-test('Compose executa somente o viewer e aponta para um LocalStack externo', async () => {
+test('Compose runs only the viewer and points to an external LocalStack instance', async () => {
   const compose = await readFile(new URL('../docker-compose.yml', import.meta.url), 'utf8');
 
   assert.match(compose, /^  viewer:/m);
@@ -11,7 +11,7 @@ test('Compose executa somente o viewer e aponta para um LocalStack externo', asy
   assert.doesNotMatch(compose, /docker\.sock|localstack-data|localstack\/localstack/);
 });
 
-test('documenta as variáveis configuráveis em um arquivo de exemplo', async () => {
+test('documents configurable variables in an example file', async () => {
   const environment = await readFile(new URL('../.env.example', import.meta.url), 'utf8');
 
   assert.match(environment, /^LOCALSTACK_ENDPOINT=/m);

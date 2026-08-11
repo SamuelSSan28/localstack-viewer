@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { marshall, unmarshall } from '../src/lib/dynamo-codec.js';
 
-test('converte objetos JSON para atributos DynamoDB e de volta', () => {
+test('converts JSON objects to DynamoDB attributes and back', () => {
   const item = {
     id: 'user-1',
     age: 32,
@@ -15,20 +15,20 @@ test('converte objetos JSON para atributos DynamoDB e de volta', () => {
   assert.deepEqual(unmarshall(marshall(item)), item);
 });
 
-test('decodifica conjuntos retornados pelo DynamoDB', () => {
+test('decodes sets returned by DynamoDB', () => {
   assert.deepEqual(unmarshall({ roles: { SS: ['reader', 'writer'] }, scores: { NS: ['1', '2.5'] } }), {
     roles: ['reader', 'writer'],
     scores: [1, 2.5],
   });
 });
 
-test('preserva tipos de conjunto ao salvar um item editado', () => {
+test('preserves set types when saving an edited item', () => {
   assert.deepEqual(marshall({ roles: ['reader'], scores: [1, 2] }, { roles: 'SS', scores: 'NS' }), {
     roles: { SS: ['reader'] },
     scores: { NS: ['1', '2'] },
   });
 });
 
-test('rejeita valores incompatíveis', () => {
-  assert.throws(() => marshall({ invalid: undefined }), /não suportado/);
+test('rejects unsupported values', () => {
+  assert.throws(() => marshall({ invalid: undefined }), /Unsupported DynamoDB type/);
 });

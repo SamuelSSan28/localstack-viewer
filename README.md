@@ -1,115 +1,134 @@
 # LocalStack Viewer
 
-Dashboard modular para visualizar recursos do LocalStack e trabalhar com dados locais sem sair do navegador.
+A modular developer dashboard for inspecting resources in an existing LocalStack instance without leaving the browser.
 
-## Funcionalidades
+## Features
 
-- Visão geral de S3, SQS, SNS, Lambda, DynamoDB e SES.
-- Área DynamoDB com navegação por tabela, listagem, criação, edição e exclusão de itens, identificação dos tipos e visualização adequada para texto, número, booleano, nulo, lista e objeto.
-- Viewer SQS com filas separadas, leitura não destrutiva, payload JSON formatado, metadados e exclusão de mensagens.
-- Área SNS com tópicos, assinaturas e publicação de payloads de teste. Como SNS não armazena histórico, mensagens devem ser inspecionadas na fila SQS assinante.
-- Caixa de entrada SES para ler destinatários, assunto e conteúdo dos e-mails enviados localmente.
-- UI responsiva baseada em Bootstrap 5 e componentes próprios, com API separada em router, serviços e codecs.
+- Overview for S3, SQS, SNS, Lambda, DynamoDB, and SES.
+- DynamoDB workspace with table navigation, item creation, editing, deletion, native type detection, and tailored rendering for strings, numbers, booleans, nulls, lists, maps, and sets.
+- SQS viewer with queue navigation, non-destructive reads, formatted JSON payloads, technical metadata, refresh, and message deletion.
+- SNS workspace with topics, subscriptions, and test publishing. SNS does not retain message history, so delivered messages are inspected through a subscribed SQS queue.
+- SES inbox with recipients, subjects, and message content.
+- Responsive Bootstrap 5 UI backed by modular routes, services, and codecs.
 
-## Pré-requisito
+## Prerequisite
 
-Este projeto é apenas um **viewer**. Ele não cria, configura ou gerencia uma instância própria do LocalStack. Antes de iniciar o viewer, mantenha seu LocalStack existente acessível pela porta `4566`.
+This project is only a **viewer**. It does not create, configure, or manage LocalStack. An existing LocalStack instance must be reachable on port `4566` or through the endpoint you configure.
 
-## Conectar ao LocalStack existente com Docker
+## Run with Docker Compose
 
 ```bash
 docker compose up --build
 ```
 
-Acesse [http://localhost:3000](http://localhost:3000). Por padrão, o container conecta ao LocalStack da máquina host usando `http://host.docker.internal:4566`.
+Open [http://localhost:3000](http://localhost:3000). By default, the container reaches LocalStack on the host through `http://host.docker.internal:4566`.
 
-Para usar um LocalStack em outra máquina ou rede, informe o endpoint existente:
+To use a LocalStack instance on another host or Docker network:
 
 ```bash
-LOCALSTACK_ENDPOINT=http://localstack.minha-rede:4566 docker compose up --build
+LOCALSTACK_ENDPOINT=http://localstack.my-network:4566 docker compose up --build
 ```
 
-Você também pode copiar `.env.example` para `.env` e alterar o endpoint. O Compose contém somente o serviço `viewer`; ele não baixa uma imagem do LocalStack, não monta o socket Docker e não cria volumes do LocalStack.
+You may also copy `.env.example` to `.env` and edit the endpoint. The Compose file runs only the viewer; it does not pull a LocalStack image, mount the Docker socket, or create LocalStack volumes.
 
-## Publicar a imagem no GitHub Container Registry
+## Published Docker image
 
-O workflow `.github/workflows/docker.yml` usa o GitHub Container Registry (GHCR):
+The repository name is **`localstack-viewer`**. Its GHCR image name is generated from the GitHub account or organization that owns the repository:
 
-- pull requests apenas validam o build, sem publicar;
-- pushes na branch `main` publicam as tags `main` e `latest`;
-- tags Git no formato `v1.2.3` publicam `1.2.3` e `1.2`;
-- também é possível publicar manualmente em **Actions → Docker image → Run workflow**.
+```text
+ghcr.io/<repository-owner>/localstack-viewer:latest
+```
 
-### O que precisa ser configurado no GitHub
+> The checkout provided to this environment has no Git remote configured, so the GitHub owner name is not available in repository metadata and cannot be written safely without guessing it. Once this repository is pushed, the workflow uses `${{ github.repository }}` and publishes under the correct owner automatically.
 
-**Nenhuma variável e nenhum secret precisam ser criados manualmente para publicar no GHCR.** O workflow utiliza somente valores fornecidos automaticamente pelo GitHub Actions:
+The exact image URL is visible on the repository's **Packages** page and in the **Generate image tags and labels** step of the Docker workflow.
 
-| Nome no workflow | Origem | Valor usado |
+### Pull and run
+
+Replace `<repository-owner>` with the GitHub user or organization shown in the repository URL:
+
+```bash
+docker pull ghcr.io/<repository-owner>/localstack-viewer:latest
+
+docker run --rm -p 3000:3000 \
+  --add-host=host.docker.internal:host-gateway \
+  -e LOCALSTACK_ENDPOINT=http://host.docker.internal:4566 \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  ghcr.io/<repository-owner>/localstack-viewer:latest
+```
+
+For a private package, authenticate before pulling:
+
+```bash
+echo "$GHCR_TOKEN" | docker login ghcr.io -u <repository-owner> --password-stdin
+docker pull ghcr.io/<repository-owner>/localstack-viewer:latest
+```
+
+The token used for pulling a private image needs `read:packages`. A public package can be pulled without logging in.
+
+## Publish to GitHub Container Registry
+
+The `.github/workflows/docker.yml` workflow:
+
+- validates pull requests without publishing;
+- publishes `main` and `latest` after pushes to `main`;
+- publishes `1.2.3` and `1.2` after a `v1.2.3` Git tag;
+- can be started manually from **Actions → Docker image → Run workflow**.
+
+No repository variable or manually-created secret is required for publishing to GHCR:
+
+| Workflow value | Source | Value |
 | --- | --- | --- |
-| `REGISTRY` | Definido no próprio workflow | `ghcr.io` |
-| `IMAGE_NAME` | `${{ github.repository }}` | `usuario-ou-org/nome-do-repositorio` |
-| `github.actor` | Contexto automático do Actions | Usuário que disparou o workflow |
-| `secrets.GITHUB_TOKEN` | Secret automático do Actions | Token temporário usado para publicar o pacote |
+| `REGISTRY` | Workflow environment | `ghcr.io` |
+| `IMAGE_NAME` | `${{ github.repository }}` | `owner/localstack-viewer` |
+| `github.actor` | GitHub Actions context | User that started the workflow |
+| `secrets.GITHUB_TOKEN` | Automatically created by Actions | Temporary package publishing token |
 
-O próprio job solicita `packages: write`, portanto o `GITHUB_TOKEN` recebe a permissão necessária durante a execução. Não crie `DOCKER_USERNAME`, `DOCKER_PASSWORD`, `GHCR_TOKEN` ou um Personal Access Token para esse fluxo.
+The job requests `packages: write`. Do not create `DOCKER_USERNAME`, `DOCKER_PASSWORD`, `GHCR_TOKEN`, or a Personal Access Token for publication. An organization administrator only needs to take action if organization policy prevents workflows from writing packages.
 
-Se a organização tiver uma política que bloqueia escrita de pacotes por workflows, um administrador precisará liberar GitHub Actions para publicar packages. Isso é uma política da organização, não uma variável deste projeto.
-
-> `LOCALSTACK_ENDPOINT`, `AWS_DEFAULT_REGION`, `PORT` e `VIEWER_PORT` são configurações de **execução do container**. Elas não são usadas para publicar a imagem e não devem ser cadastradas como secrets do GitHub Actions.
-
-Para publicar uma versão:
+Publish a version with:
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-A imagem será disponibilizada como `ghcr.io/SEU_USUARIO_OU_ORG/NOME_DO_REPOSITORIO:1.0.0`. O workflow autentica com o `GITHUB_TOKEN`; não é necessário cadastrar usuário ou senha do Docker como secret. No primeiro pacote, confira em **Package settings** se a visibilidade deve ser pública ou privada.
+After the first publication, use **Package settings** on GitHub to choose public or private visibility.
 
-Para executar a imagem publicada conectando ao LocalStack existente:
+## Runtime environment variables
+
+Runtime variables are provided when the container starts; they are not publishing credentials and should not be added as GitHub Actions secrets.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `LOCALSTACK_ENDPOINT` | `http://localhost:4566` in Node; `http://host.docker.internal:4566` in Compose | Full endpoint of the existing LocalStack instance. |
+| `AWS_DEFAULT_REGION` | `us-east-1` | Region queried and displayed by the viewer. |
+| `PORT` | `3000` | Internal HTTP port of the Node process. |
+| `VIEWER_PORT` | `3000` | Host port published by Docker Compose. |
+
+Example with a remote LocalStack endpoint and a different viewer port:
 
 ```bash
-docker run --rm -p 3000:3000 \
-  --add-host=host.docker.internal:host-gateway \
-  -e LOCALSTACK_ENDPOINT=http://host.docker.internal:4566 \
-  -e AWS_DEFAULT_REGION=us-east-1 \
-  ghcr.io/SEU_USUARIO_OU_ORG/NOME_DO_REPOSITORIO:latest
+LOCALSTACK_ENDPOINT=http://192.168.1.50:4566 VIEWER_PORT=8080 docker compose up -d
 ```
 
-## Desenvolvimento local
+## Local development
 
-Com um LocalStack já disponível na porta `4566`:
+With LocalStack already available on port `4566`:
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Configuração por variáveis de ambiente
-
-As configurações são aplicadas quando o container é iniciado, portanto a mesma imagem pode ser usada com diferentes instâncias do LocalStack.
-
-| Variável | Padrão | Descrição |
-| --- | --- | --- |
-| `LOCALSTACK_ENDPOINT` | `http://localhost:4566` no Node; `http://host.docker.internal:4566` no Compose | Endpoint completo do LocalStack existente. |
-| `AWS_DEFAULT_REGION` | `us-east-1` | Região consultada e exibida pelo viewer. |
-| `PORT` | `3000` | Porta HTTP interna do processo Node. |
-| `VIEWER_PORT` | `3000` | Porta publicada na máquina host pelo Compose. |
-
-Exemplo usando o Compose com outro endpoint e outra porta:
-
-```bash
-LOCALSTACK_ENDPOINT=http://192.168.1.50:4566 VIEWER_PORT=8080 docker compose up -d
-```
-
 ## API
 
-- `GET /api/health` — saúde do viewer.
-- `GET /api/services` — recursos encontrados e estado de cada serviço.
-- `GET /api/emails` — mensagens capturadas pelo SES local.
-- `GET /api/sqs/queues` — filas SQS.
-- `GET|DELETE /api/sqs/messages?queueUrl=...` — leitura e exclusão de mensagens.
-- `GET /api/sns/topics` — tópicos SNS.
-- `GET|POST /api/sns/topic?topicArn=...` — assinaturas e publicação de mensagem de teste.
-- `GET /api/dynamodb/tables` — tabelas DynamoDB.
-- `GET|PUT|DELETE /api/dynamodb/tables/:table/items` — consulta e manutenção dos itens.
+- `GET /api/health` — viewer health.
+- `GET /api/services` — resource counts and service status.
+- `GET /api/emails` — messages captured by local SES.
+- `GET /api/sqs/queues` — SQS queues.
+- `GET|DELETE /api/sqs/messages?queueUrl=...` — inspect or delete messages.
+- `GET /api/sns/topics` — SNS topics.
+- `GET|POST /api/sns/topic?topicArn=...` — inspect subscriptions or publish a test message.
+- `GET /api/dynamodb/tables` — DynamoDB tables.
+- `GET|PUT|DELETE /api/dynamodb/tables/:table/items` — inspect and manage items.

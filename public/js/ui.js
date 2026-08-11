@@ -8,10 +8,10 @@ export function setStatus(message, type = '') {
   setStatus.timer = setTimeout(() => element.className = 'toast', 3000);
 }
 
-export function showLoading(container, message = 'Carregando…') {
+export function showLoading(container, message = 'Loading…') {
   container.innerHTML = `<div class="state"><span class="spinner"></span>${escapeHtml(message)}</div>`;
 }
 
 export function showError(container, error) {
-  container.innerHTML = `<div class="state error-state"><b>Não foi possível carregar</b><span>${escapeHtml(error.message)}</span></div>`;
+  container.innerHTML = `<div class="state error-state"><b>Unable to load</b><span>${escapeHtml(error.message)}</span></div>`;
 }

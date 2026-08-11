@@ -21,7 +21,7 @@ export function marshallValue(value) {
   if (typeof value === 'boolean') return { BOOL: value };
   if (Array.isArray(value)) return { L: value.map(marshallValue) };
   if (typeof value === 'object') return { M: marshall(value) };
-  throw new TypeError(`Tipo DynamoDB não suportado: ${typeof value}`);
+  throw new TypeError(`Unsupported DynamoDB type: ${typeof value}`);
 }
 
 export function marshall(item = {}, types = {}) {

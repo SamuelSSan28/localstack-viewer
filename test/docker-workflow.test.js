@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-test('workflow publica no GHCR fora de pull requests', async () => {
+test('workflow publishes to GHCR outside pull requests', async () => {
   const workflow = await readFile(new URL('../.github/workflows/docker.yml', import.meta.url), 'utf8');
 
   assert.match(workflow, /REGISTRY: ghcr\.io/);
@@ -12,4 +12,5 @@ test('workflow publica no GHCR fora de pull requests', async () => {
   assert.match(workflow, /password: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
   assert.match(workflow, /push: \$\{\{ github\.event_name != 'pull_request' \}\}/);
   assert.match(workflow, /tags: \['v\*\.\*\.\*'\]/);
+  assert.match(workflow, /GITHUB_STEP_SUMMARY/);
 });

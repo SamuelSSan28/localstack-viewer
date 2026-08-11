@@ -14,7 +14,7 @@ const server = createServer(async (request, response) => {
     if (url.pathname.startsWith('/api/')) {
       const handled = await routeApi(request, response, url);
       if (handled !== false) return;
-      return sendJson(response, 404, { error: 'Endpoint não encontrado' });
+      return sendJson(response, 404, { error: 'Endpoint not found' });
     }
   } catch (error) {
     return sendJson(response, error.status || 502, { error: error.message });
@@ -22,12 +22,12 @@ const server = createServer(async (request, response) => {
 
   const pathname = url.pathname === '/' ? '/index.html' : url.pathname;
   const file = path.resolve(publicRoot, `.${pathname}`);
-  if (!file.startsWith(`${publicRoot}${path.sep}`)) return sendJson(response, 403, { error: 'Acesso negado' });
+  if (!file.startsWith(`${publicRoot}${path.sep}`)) return sendJson(response, 403, { error: 'Access denied' });
   try {
     await stat(file);
     response.writeHead(200, { 'Content-Type': contentTypes[path.extname(file)] || 'application/octet-stream' });
     createReadStream(file).pipe(response);
-  } catch { sendJson(response, 404, { error: 'Não encontrado' }); }
+  } catch { sendJson(response, 404, { error: 'Not found' }); }
 });
 
 const port = Number(process.env.PORT || 3000);

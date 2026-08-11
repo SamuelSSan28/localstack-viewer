@@ -6,7 +6,7 @@ export async function listEmails() {
     id: message.id || message.Id || String(index),
     from: message.source || message.Source || message.from || '—',
     to: message.destination?.ToAddresses || message.Destination?.ToAddresses || message.to || [],
-    subject: message.subject || message.Subject || message.Content?.Simple?.Subject?.Data || '(sem assunto)',
+    subject: message.subject || message.Subject || message.Content?.Simple?.Subject?.Data || '(no subject)',
     body: message.body?.text_part || message.body?.html_part || message.Body?.text_part || message.Body?.html_part
       || message.body || message.Body || message.Content?.Simple?.Body?.Text?.Data
       || message.Content?.Simple?.Body?.Html?.Data || '',

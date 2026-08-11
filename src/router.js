@@ -15,11 +15,11 @@ export async function routeApi(request, response, url) {
 
   if (url.pathname === '/api/sqs/messages') {
     const queueUrl = url.searchParams.get('queueUrl');
-    if (!queueUrl) throw Object.assign(new Error('queueUrl é obrigatório'), { status: 400 });
+    if (!queueUrl) throw Object.assign(new Error('queueUrl is required'), { status: 400 });
     if (request.method === 'GET') return sendJson(response, 200, { messages: await receiveMessages(queueUrl) });
     if (request.method === 'DELETE') {
       const { receiptHandle } = await readJson(request);
-      if (!receiptHandle) throw Object.assign(new Error('receiptHandle é obrigatório'), { status: 400 });
+      if (!receiptHandle) throw Object.assign(new Error('receiptHandle is required'), { status: 400 });
       await deleteMessage(queueUrl, receiptHandle);
       return sendJson(response, 200, { ok: true });
     }
@@ -27,11 +27,11 @@ export async function routeApi(request, response, url) {
 
   if (url.pathname === '/api/sns/topic') {
     const topicArn = url.searchParams.get('topicArn');
-    if (!topicArn) throw Object.assign(new Error('topicArn é obrigatório'), { status: 400 });
+    if (!topicArn) throw Object.assign(new Error('topicArn is required'), { status: 400 });
     if (request.method === 'GET') return sendJson(response, 200, await getTopic(topicArn));
     if (request.method === 'POST') {
       const { message, subject } = await readJson(request);
-      if (typeof message !== 'string' || !message.length) throw Object.assign(new Error('message é obrigatória'), { status: 400 });
+      if (typeof message !== 'string' || !message.length) throw Object.assign(new Error('message is required'), { status: 400 });
       return sendJson(response, 200, await publishMessage(topicArn, message, subject));
     }
   }
