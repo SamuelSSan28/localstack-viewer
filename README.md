@@ -29,7 +29,33 @@ LOCALSTACK_ENDPOINT=http://localstack.minha-rede:4566 docker compose up --build
 
 Você também pode copiar `.env.example` para `.env` e alterar o endpoint. O Compose contém somente o serviço `viewer`; ele não baixa uma imagem do LocalStack, não monta o socket Docker e não cria volumes do LocalStack.
 
-O workflow `.github/workflows/docker.yml` apenas **valida o build** da imagem nos pushes e pull requests. Ele não publica a imagem em nenhum registry.
+## Publicar a imagem no GitHub Container Registry
+
+O workflow `.github/workflows/docker.yml` usa o GitHub Container Registry (GHCR):
+
+- pull requests apenas validam o build, sem publicar;
+- pushes na branch `main` publicam as tags `main` e `latest`;
+- tags Git no formato `v1.2.3` publicam `1.2.3` e `1.2`;
+- também é possível publicar manualmente em **Actions → Docker image → Run workflow**.
+
+Para publicar uma versão:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+A imagem será disponibilizada como `ghcr.io/SEU_USUARIO_OU_ORG/NOME_DO_REPOSITORIO:1.0.0`. O workflow autentica com o `GITHUB_TOKEN`; não é necessário cadastrar usuário ou senha do Docker como secret. No primeiro pacote, confira em **Package settings** se a visibilidade deve ser pública ou privada.
+
+Para executar a imagem publicada conectando ao LocalStack existente:
+
+```bash
+docker run --rm -p 3000:3000 \
+  --add-host=host.docker.internal:host-gateway \
+  -e LOCALSTACK_ENDPOINT=http://host.docker.internal:4566 \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  ghcr.io/SEU_USUARIO_OU_ORG/NOME_DO_REPOSITORIO:latest
+```
 
 ## Desenvolvimento local
 
@@ -40,7 +66,22 @@ npm install
 npm run dev
 ```
 
-Variáveis aceitas: `LOCALSTACK_ENDPOINT`, `AWS_DEFAULT_REGION` e `PORT`. Em execução direta, o endpoint padrão é `http://localhost:4566`; dentro do Compose, o padrão é `http://host.docker.internal:4566`.
+## Configuração por variáveis de ambiente
+
+As configurações são aplicadas quando o container é iniciado, portanto a mesma imagem pode ser usada com diferentes instâncias do LocalStack.
+
+| Variável | Padrão | Descrição |
+| --- | --- | --- |
+| `LOCALSTACK_ENDPOINT` | `http://localhost:4566` no Node; `http://host.docker.internal:4566` no Compose | Endpoint completo do LocalStack existente. |
+| `AWS_DEFAULT_REGION` | `us-east-1` | Região consultada e exibida pelo viewer. |
+| `PORT` | `3000` | Porta HTTP interna do processo Node. |
+| `VIEWER_PORT` | `3000` | Porta publicada na máquina host pelo Compose. |
+
+Exemplo usando o Compose com outro endpoint e outra porta:
+
+```bash
+LOCALSTACK_ENDPOINT=http://192.168.1.50:4566 VIEWER_PORT=8080 docker compose up -d
+```
 
 ## API
 
