@@ -110,12 +110,18 @@ td code { color: #354158; font: 11px ui-monospace, monospace; }
 .spinner { width: 24px; height: 24px; border: 3px solid #ded9f5; border-top-color: #684bd9; border-radius: 50%; animation: spin .7s linear infinite; }
 dialog { width: min(620px, calc(100% - 30px)); padding: 25px; border: 0; border-radius: 13px; color: #17233c; box-shadow: 0 20px 60px #17233c3d; }
 dialog::backdrop { background: #17233c80; backdrop-filter: blur(2px); }
+body:has(dialog[open]) { overflow: hidden; }
+#editor[open] { display: flex; width: min(1240px, calc(100vw - 32px)); height: min(820px, calc(100dvh - 32px)); box-sizing: border-box; flex-direction: column; overflow: hidden; }
+#editor-view, #editor-edit { min-height: 0; flex: 1; }
+#editor-view:not([hidden]) { display: flex; flex-direction: column; }
+#editor-edit:not([hidden]) { display: flex; flex-direction: column; }
+#editor-edit textarea { min-height: 0; flex: 1; resize: none; }
 .dialog-head { display: flex; justify-content: space-between; margin-bottom: 20px; }
 .dialog-x { align-self: flex-start; font-size: 24px; }
 dialog label { display: block; margin-bottom: 7px; font-size: 11px; font-weight: 700; }
 textarea { width: 100%; min-height: 290px; resize: vertical; padding: 15px; border: 1px solid #dce2ea; border-radius: 8px; outline-color: #684bd9; font: 12px/1.5 ui-monospace, monospace; }
 .json-preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; color: #667187; font-size: 11px; font-weight: 700; }
-.item-json-preview { min-height: 290px; max-height: 55vh; margin: 0; overflow: auto; padding: 18px; border: 1px solid #252f43; border-radius: 8px; color: #d9e3f7; background: #111827; font: 12px/1.65 ui-monospace, SFMono-Regular, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.item-json-preview { min-height: 0; max-height: none; margin: 0; overflow: auto; overscroll-behavior: contain; flex: 1; padding: 18px; border: 1px solid #252f43; border-radius: 8px; outline-color: #684bd9; color: #d9e3f7; background: #111827; font: 12px/1.65 ui-monospace, SFMono-Regular, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .hint { color: #8d97a9; font-size: 10px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .toast { position: fixed; right: 25px; bottom: 25px; z-index: 10; padding: 12px 18px; border-radius: 9px; color: #fff; background: #239a70; opacity: 0; transform: translateY(10px); pointer-events: none; transition: .2s; font-size: 12px; box-shadow: 0 8px 22px #17233c35; }

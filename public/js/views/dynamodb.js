@@ -115,6 +115,13 @@ function openEditor(container, tableName, item = {}, schema = {}, mode = 'edit')
   container.querySelector('#item-json-preview').textContent = JSON.stringify(item, null, 2);
   setEditorMode(container, mode);
   container.querySelector('#editor').showModal();
+  const scrollTarget = container.querySelector(isEditingMode(mode) ? '#item-json' : '#item-json-preview');
+  scrollTarget.scrollTop = 0;
+  scrollTarget.focus({ preventScroll: true });
+}
+
+function isEditingMode(mode) {
+  return mode === 'edit';
 }
 
 function itemKey(index) {
@@ -221,7 +228,7 @@ export async function renderDynamo(container) {
     const { tables } = await api.tables();
     currentTable = tables.includes(state.selectedTable) ? state.selectedTable : sortedTables(tables)[0] || '';
     container.innerHTML = `<div class="page-head"><div><span class="eyebrow">DATABASE</span><h1>DynamoDB</h1><p>Inspect and manage items in a dedicated workspace for each table.</p></div></div><section class="dynamo-layout"><aside class="table-list"><label>TABLES</label><div class="table-search"><span>⌕</span><input id="table-search" type="search" placeholder="Search tables…" value="${escapeHtml(state.tableSearch)}" aria-label="Search tables"></div><div id="table-options"></div></aside><div id="table-content"><div class="empty"><b>Select a table</b></div></div></section>
-      <dialog id="editor"><div class="dialog-head"><div><span class="eyebrow">DYNAMODB</span><h2 id="editor-title">Item details</h2></div><button class="icon-button dialog-x" id="dialog-x" aria-label="Close">×</button></div><div id="editor-view"><div class="json-preview-head"><span>JSON item</span><button class="button secondary" id="edit-item">✎ Edit</button></div><pre class="item-json-preview" id="item-json-preview"></pre></div><div id="editor-edit" hidden><label for="item-json">JSON item</label><textarea id="item-json" spellcheck="false"></textarea><p class="hint">JSON values are automatically converted to DynamoDB types.</p></div><div class="dialog-actions"><button class="button secondary" id="back-to-view" hidden>Back to view</button><button class="button secondary" id="editor-close">Close</button><button class="button primary" id="save-item" hidden>Save item</button></div></dialog>`;
+      <dialog id="editor"><div class="dialog-head"><div><span class="eyebrow">DYNAMODB</span><h2 id="editor-title">Item details</h2></div><button class="icon-button dialog-x" id="dialog-x" aria-label="Close">×</button></div><div id="editor-view"><div class="json-preview-head"><span>JSON item</span><button class="button secondary" id="edit-item">✎ Edit</button></div><pre class="item-json-preview" id="item-json-preview" tabindex="0"></pre></div><div id="editor-edit" hidden><label for="item-json">JSON item</label><textarea id="item-json" spellcheck="false"></textarea><p class="hint">JSON values are automatically converted to DynamoDB types.</p></div><div class="dialog-actions"><button class="button secondary" id="back-to-view" hidden>Back to view</button><button class="button secondary" id="editor-close">Close</button><button class="button primary" id="save-item" hidden>Save item</button></div></dialog>`;
     renderTableList(container, tables);
     container.querySelector('#table-search').oninput = (event) => { state.tableSearch = event.target.value; saveState(); renderTableList(container, tables); };
     const editor = container.querySelector('#editor');

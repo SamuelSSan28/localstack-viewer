@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { compareDynamoValues, structuredPreview } from '../public/js/views/dynamodb.js';
 
@@ -22,4 +23,11 @@ test('summarizes structured values without adding an interactive JSON control', 
   assert.deepEqual(structuredPreview(['one', 'two'], 'L'), { kind: 'Array (2)', preview: '["one","two"]' });
   assert.deepEqual(structuredPreview(['one', 'two'], 'SS'), { kind: 'Set (2)', preview: '["one","two"]' });
   assert.equal(structuredPreview({ description: 'a'.repeat(100) }, 'M').preview.endsWith('…'), true);
+});
+
+test('keeps the enlarged item modal and its JSON scroll isolated from the page', async () => {
+  const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
+  assert.match(css, /body:has\(dialog\[open\]\) \{ overflow: hidden; \}/);
+  assert.match(css, /#editor\[open\].*width: min\(1240px.*height: min\(820px/s);
+  assert.match(css, /\.item-json-preview.*overscroll-behavior: contain/s);
 });
