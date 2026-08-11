@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { compareDynamoValues } from '../public/js/views/dynamodb.js';
+import { compareDynamoValues, structuredPreview } from '../public/js/views/dynamodb.js';
 
 test('sorts DynamoDB numbers numerically in either direction', () => {
   assert.ok(compareDynamoValues('2', '10', 'N', 'N', 'asc') < 0);
@@ -15,4 +15,11 @@ test('sorts ISO date strings chronologically and other strings naturally', () =>
 test('keeps missing column values at the end in either direction', () => {
   assert.ok(compareDynamoValues(undefined, 'value', 'NULL', 'S', 'asc') > 0);
   assert.ok(compareDynamoValues(undefined, 'value', 'NULL', 'S', 'desc') > 0);
+});
+
+test('summarizes structured values without adding an interactive JSON control', () => {
+  assert.deepEqual(structuredPreview({ status: 'created' }, 'M'), { kind: 'Object', preview: '{"status":"created"}' });
+  assert.deepEqual(structuredPreview(['one', 'two'], 'L'), { kind: 'Array (2)', preview: '["one","two"]' });
+  assert.deepEqual(structuredPreview(['one', 'two'], 'SS'), { kind: 'Set (2)', preview: '["one","two"]' });
+  assert.equal(structuredPreview({ description: 'a'.repeat(100) }, 'M').preview.endsWith('…'), true);
 });

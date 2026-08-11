@@ -66,6 +66,13 @@ function sortableValue(value, type) {
   return { missing: false, value: typeof value === 'string' ? value : JSON.stringify(value) };
 }
 
+export function structuredPreview(value, type, limit = 72) {
+  const json = JSON.stringify(value);
+  const kind = type === 'M' ? 'Object' : type === 'L' ? `Array (${value.length})` : `Set (${value.length})`;
+  const preview = json.length > limit ? `${json.slice(0, limit - 1)}…` : json;
+  return { kind, preview };
+}
+
 export function compareDynamoValues(left, right, leftType, rightType, direction = 'asc') {
   const a = sortableValue(left, leftType);
   const b = sortableValue(right, rightType);
@@ -80,7 +87,10 @@ function renderAttribute(value, type) {
   const label = `<span class="attribute-type type-${escapeHtml(type)}">${escapeHtml(typeNames[type] || type)}</span>`;
   if (type === 'BOOL') return `${label}<span class="boolean-value ${value ? 'true' : 'false'}">${value ? 'true' : 'false'}</span>`;
   if (type === 'NULL') return `${label}<span class="null-value">null</span>`;
-  if (['M', 'L', 'SS', 'NS'].includes(type)) return `${label}<details class="inline-json"><summary>${Array.isArray(value) ? `${value.length} item(s)` : 'View object'}</summary><pre>${escapeHtml(JSON.stringify(value, null, 2))}</pre></details>`;
+  if (['M', 'L', 'SS', 'NS'].includes(type)) {
+    const { kind, preview } = structuredPreview(value, type);
+    return `${label}<span class="structured-value"><b>${escapeHtml(kind)}</b><code>${escapeHtml(preview)}</code></span>`;
+  }
   return `${label}<code class="value-${escapeHtml(type)}">${escapeHtml(value ?? '—')}</code>`;
 }
 
@@ -159,7 +169,7 @@ function renderItems(container, tableName) {
   if (selectAll) selectAll.onchange = (event) => { visibleIndices.forEach((index) => event.target.checked ? selectedRows.add(index) : selectedRows.delete(index)); renderItems(container, tableName); };
   area.querySelectorAll('[data-select]').forEach((checkbox) => checkbox.onchange = () => { const index = Number(checkbox.dataset.select); checkbox.checked ? selectedRows.add(index) : selectedRows.delete(index); renderItems(container, tableName); });
   area.querySelectorAll('tbody tr').forEach((row) => row.onclick = (event) => {
-    if (event.target.closest('button, input, details, a')) return;
+    if (event.target.closest('button, input, a')) return;
     const index = Number(row.querySelector('[data-select]').dataset.select);
     openEditor(container, tableName, tableData.items[index], tableData.schemas[index], 'view');
   });
