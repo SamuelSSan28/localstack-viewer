@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { compareDynamoValues, structuredPreview } from '../public/js/views/dynamodb.js';
+import { clipboardValue, compareDynamoValues, structuredPreview } from '../public/js/views/dynamodb.js';
 
 test('sorts DynamoDB numbers numerically in either direction', () => {
   assert.ok(compareDynamoValues('2', '10', 'N', 'N', 'asc') < 0);
@@ -33,6 +33,22 @@ test('keeps one full-height JSON editor for both view and edit modes', async () 
   assert.match(css, /\.item-json-editor.*overscroll-behavior: contain.*flex: 1/s);
   assert.match(view, /editor\.readOnly = !isEditing/);
   assert.doesNotMatch(view, /item-json-preview|editor-view|editor-edit/);
+});
+
+test('offers explicit row actions and clipboard controls', async () => {
+  const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
+  assert.match(view, /data-view=.*View \/ Edit/);
+  assert.match(view, /data-delete=.*Delete/);
+  assert.match(view, /data-copy-row/);
+  assert.match(view, /data-copy-column/);
+  assert.match(view, /id="copy-item".*Copy all/);
+});
+
+test('copies the complete value represented by one cell', () => {
+  assert.equal(clipboardValue('customer-name'), 'customer-name');
+  assert.equal(clipboardValue(42), '42');
+  assert.equal(clipboardValue(false), 'false');
+  assert.equal(clipboardValue({ nested: ['value'] }), '{\n  "nested": [\n    "value"\n  ]\n}');
 });
 
 test('declares the star favicon', async () => {
