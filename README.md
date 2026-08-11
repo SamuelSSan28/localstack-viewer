@@ -9,7 +9,7 @@ A modular developer dashboard for inspecting resources in an existing LocalStack
 - SQS viewer with queue navigation, non-destructive reads, formatted JSON payloads, technical metadata, refresh, and message deletion.
 - SNS workspace with topics, subscriptions, and test publishing. SNS does not retain message history, so delivered messages are inspected through a subscribed SQS queue.
 - SES inbox with recipients, subjects, and message content.
-- Responsive Bootstrap 5 UI backed by modular routes, services, and codecs.
+- Modular browser UI backed by focused routes, services, and codecs.
 
 ## Prerequisite
 
