@@ -36,6 +36,6 @@ export const server = createServer(async (request, response) => {
 });
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const port = Number(process.env.PORT || 3000);
+  const port = Number(process.env.PORT || 8888);
   server.listen(port, '0.0.0.0', () => console.log(`LocalStack Viewer running at http://localhost:${port}`));
 }
