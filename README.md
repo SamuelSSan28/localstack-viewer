@@ -38,6 +38,23 @@ O workflow `.github/workflows/docker.yml` usa o GitHub Container Registry (GHCR)
 - tags Git no formato `v1.2.3` publicam `1.2.3` e `1.2`;
 - também é possível publicar manualmente em **Actions → Docker image → Run workflow**.
 
+### O que precisa ser configurado no GitHub
+
+**Nenhuma variável e nenhum secret precisam ser criados manualmente para publicar no GHCR.** O workflow utiliza somente valores fornecidos automaticamente pelo GitHub Actions:
+
+| Nome no workflow | Origem | Valor usado |
+| --- | --- | --- |
+| `REGISTRY` | Definido no próprio workflow | `ghcr.io` |
+| `IMAGE_NAME` | `${{ github.repository }}` | `usuario-ou-org/nome-do-repositorio` |
+| `github.actor` | Contexto automático do Actions | Usuário que disparou o workflow |
+| `secrets.GITHUB_TOKEN` | Secret automático do Actions | Token temporário usado para publicar o pacote |
+
+O próprio job solicita `packages: write`, portanto o `GITHUB_TOKEN` recebe a permissão necessária durante a execução. Não crie `DOCKER_USERNAME`, `DOCKER_PASSWORD`, `GHCR_TOKEN` ou um Personal Access Token para esse fluxo.
+
+Se a organização tiver uma política que bloqueia escrita de pacotes por workflows, um administrador precisará liberar GitHub Actions para publicar packages. Isso é uma política da organização, não uma variável deste projeto.
+
+> `LOCALSTACK_ENDPOINT`, `AWS_DEFAULT_REGION`, `PORT` e `VIEWER_PORT` são configurações de **execução do container**. Elas não são usadas para publicar a imagem e não devem ser cadastradas como secrets do GitHub Actions.
+
 Para publicar uma versão:
 
 ```bash
