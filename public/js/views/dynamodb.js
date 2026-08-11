@@ -23,9 +23,10 @@ function readState() {
       tableSearch: typeof saved.tableSearch === 'string' ? saved.tableSearch : '',
       itemFilters: saved.itemFilters && typeof saved.itemFilters === 'object' ? saved.itemFilters : {},
       itemSorts: saved.itemSorts && typeof saved.itemSorts === 'object' ? saved.itemSorts : {},
+      pinnedFields: saved.pinnedFields && typeof saved.pinnedFields === 'object' ? saved.pinnedFields : {},
     };
   } catch {
-    return { pinnedTables: [], selectedTable: '', tableSearch: '', itemFilters: {}, itemSorts: {} };
+    return { pinnedTables: [], selectedTable: '', tableSearch: '', itemFilters: {}, itemSorts: {}, pinnedFields: {} };
   }
 }
 
@@ -101,10 +102,11 @@ export function clipboardValue(value) {
   return String(value);
 }
 
-export function orderedFieldNames(items, keyNames = []) {
+export function orderedFieldNames(items, keyNames = [], pinnedNames = []) {
   const fields = new Set(items.flatMap((item) => Object.keys(item)));
   const keys = keyNames.filter((name) => fields.delete(name));
-  return [...keys, ...[...fields].sort((left, right) => left.localeCompare(right))];
+  const pinned = pinnedNames.filter((name) => fields.delete(name));
+  return [...keys, ...pinned, ...[...fields].sort((left, right) => left.localeCompare(right))];
 }
 
 export function orderJsonValue(value, keyNames = []) {
@@ -192,7 +194,8 @@ async function deleteRows(container, tableName, indices) {
 
 function renderItems(container, tableName) {
   const area = container.querySelector('#table-content');
-  const columns = orderedFieldNames(tableData.items, tableData.keys);
+  const pinnedFields = Array.isArray(state.pinnedFields[tableName]) ? state.pinnedFields[tableName] : [];
+  const columns = orderedFieldNames(tableData.items, tableData.keys, pinnedFields);
   const filter = tableFilter(tableName);
   const sort = tableSort(tableName);
   const visibleIndices = tableData.items.map((_, index) => index)
@@ -201,7 +204,7 @@ function renderItems(container, tableName) {
   selectedRows = new Set([...selectedRows].filter((index) => visibleIndices.includes(index)));
   area.innerHTML = `<div class="table-toolbar"><div><span class="eyebrow">TABLE</span><h2>${escapeHtml(tableName)}</h2><p>${tableData.count} item(s) · Key: ${escapeHtml(tableData.keys.join(' + '))}</p></div><div class="table-toolbar-actions"><button class="button secondary" id="refresh-items">↻ Refresh</button><button class="button primary" id="new-item">＋ New item</button></div></div>
     <div class="item-tools"><div class="item-filter"><span class="search-icon">⌕</span><input id="item-search" type="search" placeholder="Filter items…" value="${escapeHtml(filter.query)}" aria-label="Filter table items"><select id="filter-field" aria-label="Filter field"><option value="">All fields</option>${columns.map((column) => `<option value="${escapeHtml(column)}" ${filter.field === column ? 'selected' : ''}>${escapeHtml(column)}</option>`).join('')}</select>${filter.query ? '<button class="clear-filter" id="clear-filter">Clear</button>' : ''}</div><button class="button danger bulk-delete" id="bulk-delete" ${selectedRows.size ? '' : 'disabled'}>Delete selected <span>${selectedRows.size || ''}</span></button></div>
-    ${tableData.items.length ? `<div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all visible items" ${visibleIndices.length && visibleIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns.map((column) => `<th><span class="column-head"><span class="column-name"><button class="copy-column" data-copy-column="${escapeHtml(column)}" title="Copy column name">${escapeHtml(column)}</button>${tableData.keys.includes(column) ? '<span class="key-attribute" title="Key attribute" aria-label="Key attribute">★</span>' : ''}</span><button class="sort-column ${sort.column === column ? 'active' : ''}" data-sort="${escapeHtml(column)}" aria-label="Sort by ${escapeHtml(column)}" aria-sort="${sort.column === column ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><span class="sort-indicator">${sort.column === column ? (sort.direction === 'asc' ? '▲' : '▼') : '⇅'}</span></button></span></th>`).join('')}<th class="actions actions-head">Actions</th></tr></thead><tbody>${visibleIndices.map((index) => { const item = tableData.items[index]; return `<tr><td class="select-cell"><input type="checkbox" data-select="${index}" aria-label="Select item ${index + 1}" ${selectedRows.has(index) ? 'checked' : ''}></td>${columns.map((column) => `<td class="attribute-cell copy-cell" data-copy-row="${index}" data-copy-field="${escapeHtml(column)}" title="Copy cell value">${renderAttribute(item[column], tableData.types[index][column] || 'NULL')}</td>`).join('')}<td class="actions"><button class="row-action view-edit-action" data-view="${index}" title="View or edit item" aria-label="View or edit item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.5 0 9.5 7 9.5 7s-4 7-9.5 7S2.5 12 2.5 12 6.5 5 12 5Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="row-action delete-action" data-delete="${index}" title="Delete item" aria-label="Delete item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></td></tr>`; }).join('')}</tbody></table></div>${visibleIndices.length ? '' : '<div class="filter-empty"><b>No matching items</b><span>Try another field or search term.</span></div>'}` : '<div class="empty"><b>Empty table</b><span>Add the first item to get started.</span></div>'}`;
+    ${tableData.items.length ? `<div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all visible items" ${visibleIndices.length && visibleIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns.map((column) => { const isKey = tableData.keys.includes(column); const isPinned = pinnedFields.includes(column); return `<th><span class="column-head"><span class="column-name"><button class="copy-column" data-copy-column="${escapeHtml(column)}" title="Copy column name">${escapeHtml(column)}</button>${isKey ? '<span class="key-attribute" title="Key attribute" aria-label="Key attribute">★</span>' : `<button class="pin-field ${isPinned ? 'pinned' : ''}" data-pin-field="${escapeHtml(column)}" title="${isPinned ? 'Unpin field' : 'Pin field after key columns'}" aria-label="${isPinned ? 'Unpin' : 'Pin'} field ${escapeHtml(column)}">◆</button>`}</span><button class="sort-column ${sort.column === column ? 'active' : ''}" data-sort="${escapeHtml(column)}" aria-label="Sort by ${escapeHtml(column)}" aria-sort="${sort.column === column ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><span class="sort-indicator">${sort.column === column ? (sort.direction === 'asc' ? '▲' : '▼') : '⇅'}</span></button></span></th>`; }).join('')}<th class="actions actions-head">Actions</th></tr></thead><tbody>${visibleIndices.map((index) => { const item = tableData.items[index]; return `<tr><td class="select-cell"><input type="checkbox" data-select="${index}" aria-label="Select item ${index + 1}" ${selectedRows.has(index) ? 'checked' : ''}></td>${columns.map((column) => `<td class="attribute-cell copy-cell" data-copy-row="${index}" data-copy-field="${escapeHtml(column)}" title="Copy cell value">${renderAttribute(item[column], tableData.types[index][column] || 'NULL')}</td>`).join('')}<td class="actions"><button class="row-action view-edit-action" data-view="${index}" title="View or edit item" aria-label="View or edit item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.5 0 9.5 7 9.5 7s-4 7-9.5 7S2.5 12 2.5 12 6.5 5 12 5Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="row-action delete-action" data-delete="${index}" title="Delete item" aria-label="Delete item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></td></tr>`; }).join('')}</tbody></table></div>${visibleIndices.length ? '' : '<div class="filter-empty"><b>No matching items</b><span>Try another field or search term.</span></div>'}` : '<div class="empty"><b>Empty table</b><span>Add the first item to get started.</span></div>'}`;
 
   area.querySelector('#new-item').onclick = () => openEditor(container, tableName);
   area.querySelector('#refresh-items').onclick = () => loadItems(container, tableName);
@@ -216,6 +219,12 @@ function renderItems(container, tableName) {
     renderItems(container, tableName);
   });
   area.querySelectorAll('[data-copy-column]').forEach((button) => button.onclick = () => copyToClipboard(button.dataset.copyColumn, 'Column name'));
+  area.querySelectorAll('[data-pin-field]').forEach((button) => button.onclick = () => {
+    const field = button.dataset.pinField;
+    state.pinnedFields[tableName] = pinnedFields.includes(field) ? pinnedFields.filter((name) => name !== field) : [...pinnedFields, field];
+    saveState();
+    renderItems(container, tableName);
+  });
   area.querySelectorAll('[data-copy-row]').forEach((cell) => cell.onclick = () => copyToClipboard(tableData.items[Number(cell.dataset.copyRow)][cell.dataset.copyField], 'Cell value'));
   const selectAll = area.querySelector('#select-all');
   if (selectAll) selectAll.onchange = (event) => { visibleIndices.forEach((index) => event.target.checked ? selectedRows.add(index) : selectedRows.delete(index)); renderItems(container, tableName); };

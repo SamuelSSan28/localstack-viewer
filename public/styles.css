@@ -80,13 +80,16 @@ th { padding: 11px 14px; background: #f8f9fb; color: #7c879a; font-size: 9px; le
 .column-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .column-name { display: inline-flex; align-items: center; gap: 5px; }
 .key-attribute { color: #eab308; font-size: 12px; line-height: 1; }
-.copy-column, .sort-column { padding: 0; border: 0; color: inherit; background: none; font: inherit; font-weight: 700; letter-spacing: inherit; text-align: left; text-transform: inherit; }
+.copy-column, .sort-column, .pin-field { padding: 0; border: 0; color: inherit; background: none; font: inherit; font-weight: 700; letter-spacing: inherit; text-align: left; text-transform: inherit; }
 .copy-column { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .copy-column:hover { color: #6042d2; text-decoration: underline dotted; text-underline-offset: 3px; }
 .sort-column { flex: 0 0 auto; }
 .sort-column:hover, .sort-column.active { color: #6042d2; }
 .sort-indicator { color: #aab1bd; font-size: 8px; letter-spacing: 0; }
 .sort-column.active .sort-indicator { color: #6042d2; }
+.pin-field { color: #aab1bd; font-size: 9px; line-height: 1; opacity: 0; transform: rotate(45deg); transition: color .15s, opacity .15s; }
+th:hover .pin-field, .pin-field:focus-visible, .pin-field.pinned { opacity: 1; }
+.pin-field:hover, .pin-field.pinned { color: #684bd9; }
 td { max-width: 260px; padding: 12px 14px; overflow: hidden; border-top: 1px solid #edf0f4; text-overflow: ellipsis; white-space: nowrap; }
 tbody tr { transition: background .15s; cursor: pointer; }
 tbody tr:hover { background: #faf9ff; }
