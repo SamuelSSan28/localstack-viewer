@@ -25,9 +25,19 @@ test('summarizes structured values without adding an interactive JSON control', 
   assert.equal(structuredPreview({ description: 'a'.repeat(100) }, 'M').preview.endsWith('…'), true);
 });
 
-test('keeps the enlarged item modal and its JSON scroll isolated from the page', async () => {
+test('keeps one full-height JSON editor for both view and edit modes', async () => {
   const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
+  const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
   assert.match(css, /body:has\(dialog\[open\]\) \{ overflow: hidden; \}/);
   assert.match(css, /#editor\[open\].*width: min\(1240px.*height: min\(820px/s);
-  assert.match(css, /\.item-json-preview.*overscroll-behavior: contain/s);
+  assert.match(css, /\.item-json-editor.*overscroll-behavior: contain.*flex: 1/s);
+  assert.match(view, /editor\.readOnly = !isEditing/);
+  assert.doesNotMatch(view, /item-json-preview|editor-view|editor-edit/);
+});
+
+test('declares the star favicon', async () => {
+  const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
+  const favicon = await readFile(new URL('../public/favicon.svg', import.meta.url), 'utf8');
+  assert.match(html, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
+  assert.match(favicon, /fill="#facc15"/);
 });
