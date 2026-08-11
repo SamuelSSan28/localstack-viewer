@@ -1,7 +1,19 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { clipboardValue, compareDynamoValues, structuredPreview } from '../public/js/views/dynamodb.js';
+import { clipboardValue, compareDynamoValues, orderedFieldNames, orderJsonValue, structuredPreview } from '../public/js/views/dynamodb.js';
+
+test('places DynamoDB keys first and sorts remaining fields alphabetically', () => {
+  const items = [{ zebra: 1, sortKey: 2 }, { alpha: 3, partitionKey: 4 }];
+  assert.deepEqual(orderedFieldNames(items, ['partitionKey', 'sortKey']), ['partitionKey', 'sortKey', 'alpha', 'zebra']);
+});
+
+test('orders JSON keys first at the root and alphabetically in nested objects', () => {
+  const value = { zebra: 1, partitionKey: 'key', details: { zebra: 2, alpha: 1 }, list: [{ beta: 2, alpha: 1 }] };
+  assert.deepEqual(Object.keys(orderJsonValue(value, ['partitionKey'])), ['partitionKey', 'details', 'list', 'zebra']);
+  assert.deepEqual(Object.keys(orderJsonValue(value).details), ['alpha', 'zebra']);
+  assert.deepEqual(Object.keys(orderJsonValue(value).list[0]), ['alpha', 'beta']);
+});
 
 test('sorts DynamoDB numbers numerically in either direction', () => {
   assert.ok(compareDynamoValues('2', '10', 'N', 'N', 'asc') < 0);
@@ -44,6 +56,11 @@ test('offers compact, accessible row actions and clipboard controls', async () =
   assert.match(view, /data-copy-row/);
   assert.match(view, /data-copy-column/);
   assert.match(view, /id="copy-item".*Copy all/);
+});
+
+test('marks key columns with an accessible star', async () => {
+  const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
+  assert.match(view, /class="key-attribute" title="Key attribute" aria-label="Key attribute">★/);
 });
 
 test('copies the complete value represented by one cell', () => {
