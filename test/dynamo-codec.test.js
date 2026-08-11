@@ -5,7 +5,7 @@ import { marshall, unmarshall } from '../src/lib/dynamo-codec.js';
 test('converts JSON objects to DynamoDB attributes and back', () => {
   const item = {
     id: 'user-1',
-    age: 32,
+    age: '32',
     active: true,
     profile: { city: 'Recife' },
     tags: ['admin', 'local'],
@@ -18,7 +18,7 @@ test('converts JSON objects to DynamoDB attributes and back', () => {
 test('decodes sets returned by DynamoDB', () => {
   assert.deepEqual(unmarshall({ roles: { SS: ['reader', 'writer'] }, scores: { NS: ['1', '2.5'] } }), {
     roles: ['reader', 'writer'],
-    scores: [1, 2.5],
+    scores: ['1', '2.5'],
   });
 });
 
@@ -27,6 +27,19 @@ test('preserves set types when saving an edited item', () => {
     roles: { SS: ['reader'] },
     scores: { NS: ['1', '2'] },
   });
+});
+
+test('preserves arbitrary numeric precision, including nested values', () => {
+  const raw = {
+    id: { N: '9007199254740993' },
+    details: { M: { rate: { N: '0.123456789012345678901' } } },
+  };
+  const schema = {
+    id: { type: 'N' },
+    details: { type: 'M', fields: { rate: { type: 'N' } } },
+  };
+
+  assert.deepEqual(marshall(unmarshall(raw), schema), raw);
 });
 
 test('rejects unsupported values', () => {

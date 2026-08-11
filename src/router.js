@@ -41,9 +41,9 @@ export async function routeApi(request, response, url) {
     const tableName = decodeURIComponent(tableMatch[1]);
     if (request.method === 'GET') return sendJson(response, 200, await getTable(tableName));
     const body = await readJson(request);
-    if (request.method === 'PUT') return sendJson(response, 200, { item: await saveItem(tableName, body.item, body.types) });
+    if (request.method === 'PUT') return sendJson(response, 200, { item: await saveItem(tableName, body.item, body.schema) });
     if (request.method === 'DELETE') {
-      await deleteItem(tableName, body.key);
+      await deleteItem(tableName, body.key, body.schema);
       return sendJson(response, 200, { ok: true });
     }
   }

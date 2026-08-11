@@ -3,7 +3,9 @@ import { escapeHtml, setStatus, showError, showLoading } from '../ui.js';
 
 let currentTable = '';
 let tableData;
-let editingTypes = {};
+let editingSchema = {};
+let editingTable = '';
+let loadGeneration = 0;
 
 const typeNames = { S: 'String', N: 'Number', BOOL: 'Boolean', NULL: 'Null', M: 'Map', L: 'List', SS: 'Strings', NS: 'Numbers', B: 'Binary' };
 
@@ -15,33 +17,41 @@ function renderAttribute(value, type) {
   return `${label}<code class="value-${escapeHtml(type)}">${escapeHtml(value ?? '—')}</code>`;
 }
 
-function openEditor(container, item = {}, types = {}) {
-  editingTypes = types;
+function openEditor(container, tableName, item = {}, schema = {}) {
+  editingTable = tableName;
+  editingSchema = schema;
   container.querySelector('#editor-title').textContent = Object.keys(item).length ? 'Edit item' : 'New item';
   container.querySelector('#item-json').value = JSON.stringify(item, null, 2);
   container.querySelector('#editor').showModal();
 }
 
 async function loadItems(container, tableName) {
+  const generation = ++loadGeneration;
   currentTable = tableName;
   const area = container.querySelector('#table-content');
   showLoading(area, `Reading ${tableName}…`);
   try {
-    tableData = await api.table(tableName);
+    const data = await api.table(tableName);
+    if (generation !== loadGeneration || currentTable !== tableName) return;
+    tableData = data;
     const columns = [...new Set(tableData.items.flatMap(Object.keys))];
     area.innerHTML = `<div class="table-toolbar"><div><span class="eyebrow">TABLE</span><h2>${escapeHtml(tableName)}</h2><p>${tableData.count} item(s) · Key: ${escapeHtml(tableData.keys.join(' + '))}</p></div><button class="button primary" id="new-item">＋ New item</button></div>${tableData.items.length ? `<div class="table-scroll"><table><thead><tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join('')}<th></th></tr></thead><tbody>${tableData.items.map((item, index) => `<tr>${columns.map((column) => `<td class="attribute-cell">${renderAttribute(item[column], tableData.types[index][column] || 'NULL')}</td>`).join('')}<td class="actions"><button data-edit="${index}" title="Edit">✎</button><button data-delete="${index}" title="Delete">⌫</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><b>Empty table</b><span>Add the first item to get started.</span></div>'}`;
-    area.querySelector('#new-item').onclick = () => openEditor(container);
-    area.querySelectorAll('[data-edit]').forEach((button) => button.onclick = () => openEditor(container, tableData.items[button.dataset.edit], tableData.types[button.dataset.edit]));
+    area.querySelector('#new-item').onclick = () => openEditor(container, tableName);
+    area.querySelectorAll('[data-edit]').forEach((button) => button.onclick = () => openEditor(container, tableName, tableData.items[button.dataset.edit], tableData.schemas[button.dataset.edit]));
     area.querySelectorAll('[data-delete]').forEach((button) => button.onclick = async () => {
       const item = tableData.items[button.dataset.delete];
       const key = Object.fromEntries(tableData.keys.map((name) => [name, item[name]]));
+      const keySchema = Object.fromEntries(tableData.keys.map((name) => [name, tableData.schemas[button.dataset.delete][name]]));
       if (!confirm(`Delete ${JSON.stringify(key)}?`)) return;
-      try { await api.deleteItem(currentTable, key); setStatus('Item deleted'); await loadItems(container, currentTable); } catch (error) { setStatus(error.message, 'error'); }
+      try { await api.deleteItem(tableName, key, keySchema); setStatus('Item deleted'); await loadItems(container, tableName); } catch (error) { setStatus(error.message, 'error'); }
     });
-  } catch (error) { showError(area, error); }
+  } catch (error) {
+    if (generation === loadGeneration && currentTable === tableName) showError(area, error);
+  }
 }
 
 export async function renderDynamo(container) {
+  loadGeneration += 1;
   showLoading(container, 'Listing tables…');
   try {
     const { tables } = await api.tables();
@@ -53,7 +63,7 @@ export async function renderDynamo(container) {
     });
     container.querySelector('#editor').addEventListener('close', async (event) => {
       if (event.target.returnValue !== 'default') return;
-      try { await api.saveItem(currentTable, JSON.parse(container.querySelector('#item-json').value), editingTypes); setStatus('Item saved'); await loadItems(container, currentTable); } catch (error) { setStatus(error.message, 'error'); }
+      try { await api.saveItem(editingTable, JSON.parse(container.querySelector('#item-json').value), editingSchema); setStatus('Item saved'); await loadItems(container, editingTable); } catch (error) { setStatus(error.message, 'error'); }
     });
     if (tables[0]) loadItems(container, tables[0]);
   } catch (error) { showError(container, error); }
