@@ -22,9 +22,10 @@ function readState() {
       selectedTable: typeof saved.selectedTable === 'string' ? saved.selectedTable : '',
       tableSearch: typeof saved.tableSearch === 'string' ? saved.tableSearch : '',
       itemFilters: saved.itemFilters && typeof saved.itemFilters === 'object' ? saved.itemFilters : {},
+      itemSorts: saved.itemSorts && typeof saved.itemSorts === 'object' ? saved.itemSorts : {},
     };
   } catch {
-    return { pinnedTables: [], selectedTable: '', tableSearch: '', itemFilters: {} };
+    return { pinnedTables: [], selectedTable: '', tableSearch: '', itemFilters: {}, itemSorts: {} };
   }
 }
 
@@ -47,6 +48,32 @@ function matchesItem(item, filter) {
   if (!query) return true;
   const values = filter.field ? [item[filter.field]] : Object.values(item);
   return values.some((value) => String(JSON.stringify(value ?? null)).toLocaleLowerCase().includes(query));
+}
+
+function tableSort(tableName) {
+  const sort = state.itemSorts[tableName];
+  return sort && typeof sort.column === 'string' ? sort : { column: '', direction: '' };
+}
+
+function sortableValue(value, type) {
+  if (value === undefined || value === null) return { missing: true, value: '' };
+  if (type === 'N') return { missing: false, value: Number(value) };
+  if (type === 'BOOL') return { missing: false, value: Number(value) };
+  if (type === 'S' && /^\d{4}-\d{2}-\d{2}(?:[T ][0-9:.+-]+Z?)?$/.test(value)) {
+    const timestamp = Date.parse(value);
+    if (!Number.isNaN(timestamp)) return { missing: false, value: timestamp };
+  }
+  return { missing: false, value: typeof value === 'string' ? value : JSON.stringify(value) };
+}
+
+export function compareDynamoValues(left, right, leftType, rightType, direction = 'asc') {
+  const a = sortableValue(left, leftType);
+  const b = sortableValue(right, rightType);
+  if (a.missing || b.missing) return a.missing === b.missing ? 0 : (a.missing ? 1 : -1);
+  const comparison = typeof a.value === 'number' && typeof b.value === 'number'
+    ? a.value - b.value
+    : String(a.value).localeCompare(String(b.value), undefined, { numeric: true, sensitivity: 'base' });
+  return direction === 'desc' ? -comparison : comparison;
 }
 
 function renderAttribute(value, type) {
@@ -107,17 +134,27 @@ function renderItems(container, tableName) {
   const area = container.querySelector('#table-content');
   const columns = [...new Set(tableData.items.flatMap(Object.keys))];
   const filter = tableFilter(tableName);
-  const visibleIndices = tableData.items.map((_, index) => index).filter((index) => matchesItem(tableData.items[index], filter));
+  const sort = tableSort(tableName);
+  const visibleIndices = tableData.items.map((_, index) => index)
+    .filter((index) => matchesItem(tableData.items[index], filter))
+    .sort((left, right) => sort.column ? compareDynamoValues(tableData.items[left][sort.column], tableData.items[right][sort.column], tableData.types[left][sort.column], tableData.types[right][sort.column], sort.direction) || left - right : left - right);
   selectedRows = new Set([...selectedRows].filter((index) => visibleIndices.includes(index)));
-  area.innerHTML = `<div class="table-toolbar"><div><span class="eyebrow">TABLE</span><h2>${escapeHtml(tableName)}</h2><p>${tableData.count} item(s) · Key: ${escapeHtml(tableData.keys.join(' + '))}</p></div><button class="button primary" id="new-item">＋ New item</button></div>
+  area.innerHTML = `<div class="table-toolbar"><div><span class="eyebrow">TABLE</span><h2>${escapeHtml(tableName)}</h2><p>${tableData.count} item(s) · Key: ${escapeHtml(tableData.keys.join(' + '))}</p></div><div class="table-toolbar-actions"><button class="button secondary" id="refresh-items">↻ Refresh</button><button class="button primary" id="new-item">＋ New item</button></div></div>
     <div class="item-tools"><div class="item-filter"><span class="search-icon">⌕</span><input id="item-search" type="search" placeholder="Filter items…" value="${escapeHtml(filter.query)}" aria-label="Filter table items"><select id="filter-field" aria-label="Filter field"><option value="">All fields</option>${columns.map((column) => `<option value="${escapeHtml(column)}" ${filter.field === column ? 'selected' : ''}>${escapeHtml(column)}</option>`).join('')}</select>${filter.query ? '<button class="clear-filter" id="clear-filter">Clear</button>' : ''}</div><button class="button danger bulk-delete" id="bulk-delete" ${selectedRows.size ? '' : 'disabled'}>Delete selected <span>${selectedRows.size || ''}</span></button></div>
-    ${tableData.items.length ? `<div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all visible items" ${visibleIndices.length && visibleIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join('')}<th></th></tr></thead><tbody>${visibleIndices.map((index) => { const item = tableData.items[index]; return `<tr><td class="select-cell"><input type="checkbox" data-select="${index}" aria-label="Select item ${index + 1}" ${selectedRows.has(index) ? 'checked' : ''}></td>${columns.map((column) => `<td class="attribute-cell">${renderAttribute(item[column], tableData.types[index][column] || 'NULL')}</td>`).join('')}<td class="actions"><button data-edit="${index}" title="Edit">✎</button><button data-delete="${index}" title="Delete">⌫</button></td></tr>`; }).join('')}</tbody></table></div>${visibleIndices.length ? '' : '<div class="filter-empty"><b>No matching items</b><span>Try another field or search term.</span></div>'}` : '<div class="empty"><b>Empty table</b><span>Add the first item to get started.</span></div>'}`;
+    ${tableData.items.length ? `<div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all visible items" ${visibleIndices.length && visibleIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns.map((column) => `<th><button class="sort-column ${sort.column === column ? 'active' : ''}" data-sort="${escapeHtml(column)}" aria-label="Sort by ${escapeHtml(column)}" aria-sort="${sort.column === column ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><span>${escapeHtml(column)}</span><span class="sort-indicator">${sort.column === column ? (sort.direction === 'asc' ? '▲' : '▼') : '⇅'}</span></button></th>`).join('')}<th></th></tr></thead><tbody>${visibleIndices.map((index) => { const item = tableData.items[index]; return `<tr><td class="select-cell"><input type="checkbox" data-select="${index}" aria-label="Select item ${index + 1}" ${selectedRows.has(index) ? 'checked' : ''}></td>${columns.map((column) => `<td class="attribute-cell">${renderAttribute(item[column], tableData.types[index][column] || 'NULL')}</td>`).join('')}<td class="actions"><button data-edit="${index}" title="Edit">✎</button><button data-delete="${index}" title="Delete">⌫</button></td></tr>`; }).join('')}</tbody></table></div>${visibleIndices.length ? '' : '<div class="filter-empty"><b>No matching items</b><span>Try another field or search term.</span></div>'}` : '<div class="empty"><b>Empty table</b><span>Add the first item to get started.</span></div>'}`;
 
   area.querySelector('#new-item').onclick = () => openEditor(container, tableName);
+  area.querySelector('#refresh-items').onclick = () => loadItems(container, tableName);
   area.querySelector('#item-search').oninput = (event) => { updateTableFilter(tableName, { query: event.target.value }); renderItems(container, tableName); container.querySelector('#item-search').focus(); };
   area.querySelector('#filter-field').onchange = (event) => { updateTableFilter(tableName, { field: event.target.value }); renderItems(container, tableName); };
   area.querySelector('#clear-filter')?.addEventListener('click', () => { updateTableFilter(tableName, { query: '', field: '' }); renderItems(container, tableName); });
   area.querySelector('#bulk-delete').onclick = () => deleteRows(container, tableName, [...selectedRows]);
+  area.querySelectorAll('[data-sort]').forEach((button) => button.onclick = () => {
+    const column = button.dataset.sort;
+    state.itemSorts[tableName] = { column, direction: sort.column === column && sort.direction === 'asc' ? 'desc' : 'asc' };
+    saveState();
+    renderItems(container, tableName);
+  });
   const selectAll = area.querySelector('#select-all');
   if (selectAll) selectAll.onchange = (event) => { visibleIndices.forEach((index) => event.target.checked ? selectedRows.add(index) : selectedRows.delete(index)); renderItems(container, tableName); };
   area.querySelectorAll('[data-select]').forEach((checkbox) => checkbox.onchange = () => { const index = Number(checkbox.dataset.select); checkbox.checked ? selectedRows.add(index) : selectedRows.delete(index); renderItems(container, tableName); });

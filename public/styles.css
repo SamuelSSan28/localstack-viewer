@@ -63,6 +63,7 @@ h3 { margin: 16px 0 5px; font-size: 14px; }
 .list-empty { padding: 25px 8px; color: #9ba4b5; font-size: 11px; text-align: center; }
 #table-content { min-width: 0; padding: 25px; }
 .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+.table-toolbar-actions { display: flex; gap: 8px; }
 .item-tools { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
 .item-filter { width: min(520px, 100%); padding-left: 10px; }
 .item-filter input { flex: 1; padding: 9px 8px; }
@@ -76,6 +77,10 @@ h3 { margin: 16px 0 5px; font-size: 14px; }
 .table-scroll { overflow: auto; border: 1px solid #e5e9ef; border-radius: 9px; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th { padding: 11px 14px; background: #f8f9fb; color: #7c879a; font-size: 9px; letter-spacing: .8px; text-align: left; text-transform: uppercase; }
+.sort-column { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 0; border: 0; color: inherit; background: none; font: inherit; font-weight: 700; letter-spacing: inherit; text-align: left; text-transform: inherit; }
+.sort-column:hover, .sort-column.active { color: #6042d2; }
+.sort-indicator { color: #aab1bd; font-size: 8px; letter-spacing: 0; }
+.sort-column.active .sort-indicator { color: #6042d2; }
 td { max-width: 260px; padding: 12px 14px; overflow: hidden; border-top: 1px solid #edf0f4; text-overflow: ellipsis; white-space: nowrap; }
 tbody tr { transition: background .15s; cursor: pointer; }
 tbody tr:hover { background: #faf9ff; }
