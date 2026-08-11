@@ -101,6 +101,23 @@ export function clipboardValue(value) {
   return String(value);
 }
 
+export function orderedFieldNames(items, keyNames = []) {
+  const fields = new Set(items.flatMap((item) => Object.keys(item)));
+  const keys = keyNames.filter((name) => fields.delete(name));
+  return [...keys, ...[...fields].sort((left, right) => left.localeCompare(right))];
+}
+
+export function orderJsonValue(value, keyNames = []) {
+  if (Array.isArray(value)) return value.map((entry) => orderJsonValue(entry));
+  if (!value || typeof value !== 'object') return value;
+  const fields = orderedFieldNames([value], keyNames);
+  return Object.fromEntries(fields.map((name) => [name, orderJsonValue(value[name])]));
+}
+
+function editorJson(item, keyNames = []) {
+  return JSON.stringify(orderJsonValue(item, keyNames), null, 2);
+}
+
 async function copyToClipboard(value, label = 'Value') {
   const text = clipboardValue(value);
   try {
@@ -142,7 +159,7 @@ function openEditor(container, tableName, item = {}, schema = {}, mode = 'edit')
   editingItem = item;
   editingExistingItem = Object.keys(item).length > 0;
   container.querySelector('#editor-title').textContent = editingExistingItem ? 'Item details' : 'New item';
-  container.querySelector('#item-json').value = JSON.stringify(item, null, 2);
+  container.querySelector('#item-json').value = editorJson(item, tableData?.keys || []);
   setEditorMode(container, mode);
   container.querySelector('#editor').showModal();
   const editor = container.querySelector('#item-json');
@@ -175,7 +192,7 @@ async function deleteRows(container, tableName, indices) {
 
 function renderItems(container, tableName) {
   const area = container.querySelector('#table-content');
-  const columns = [...new Set(tableData.items.flatMap(Object.keys))];
+  const columns = orderedFieldNames(tableData.items, tableData.keys);
   const filter = tableFilter(tableName);
   const sort = tableSort(tableName);
   const visibleIndices = tableData.items.map((_, index) => index)
@@ -184,7 +201,7 @@ function renderItems(container, tableName) {
   selectedRows = new Set([...selectedRows].filter((index) => visibleIndices.includes(index)));
   area.innerHTML = `<div class="table-toolbar"><div><span class="eyebrow">TABLE</span><h2>${escapeHtml(tableName)}</h2><p>${tableData.count} item(s) · Key: ${escapeHtml(tableData.keys.join(' + '))}</p></div><div class="table-toolbar-actions"><button class="button secondary" id="refresh-items">↻ Refresh</button><button class="button primary" id="new-item">＋ New item</button></div></div>
     <div class="item-tools"><div class="item-filter"><span class="search-icon">⌕</span><input id="item-search" type="search" placeholder="Filter items…" value="${escapeHtml(filter.query)}" aria-label="Filter table items"><select id="filter-field" aria-label="Filter field"><option value="">All fields</option>${columns.map((column) => `<option value="${escapeHtml(column)}" ${filter.field === column ? 'selected' : ''}>${escapeHtml(column)}</option>`).join('')}</select>${filter.query ? '<button class="clear-filter" id="clear-filter">Clear</button>' : ''}</div><button class="button danger bulk-delete" id="bulk-delete" ${selectedRows.size ? '' : 'disabled'}>Delete selected <span>${selectedRows.size || ''}</span></button></div>
-    ${tableData.items.length ? `<div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all visible items" ${visibleIndices.length && visibleIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns.map((column) => `<th><span class="column-head"><button class="copy-column" data-copy-column="${escapeHtml(column)}" title="Copy column name">${escapeHtml(column)}</button><button class="sort-column ${sort.column === column ? 'active' : ''}" data-sort="${escapeHtml(column)}" aria-label="Sort by ${escapeHtml(column)}" aria-sort="${sort.column === column ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><span class="sort-indicator">${sort.column === column ? (sort.direction === 'asc' ? '▲' : '▼') : '⇅'}</span></button></span></th>`).join('')}<th class="actions actions-head">Actions</th></tr></thead><tbody>${visibleIndices.map((index) => { const item = tableData.items[index]; return `<tr><td class="select-cell"><input type="checkbox" data-select="${index}" aria-label="Select item ${index + 1}" ${selectedRows.has(index) ? 'checked' : ''}></td>${columns.map((column) => `<td class="attribute-cell copy-cell" data-copy-row="${index}" data-copy-field="${escapeHtml(column)}" title="Copy cell value">${renderAttribute(item[column], tableData.types[index][column] || 'NULL')}</td>`).join('')}<td class="actions"><button class="row-action view-edit-action" data-view="${index}" title="View or edit item" aria-label="View or edit item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.5 0 9.5 7 9.5 7s-4 7-9.5 7S2.5 12 2.5 12 6.5 5 12 5Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="row-action delete-action" data-delete="${index}" title="Delete item" aria-label="Delete item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></td></tr>`; }).join('')}</tbody></table></div>${visibleIndices.length ? '' : '<div class="filter-empty"><b>No matching items</b><span>Try another field or search term.</span></div>'}` : '<div class="empty"><b>Empty table</b><span>Add the first item to get started.</span></div>'}`;
+    ${tableData.items.length ? `<div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all visible items" ${visibleIndices.length && visibleIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns.map((column) => `<th><span class="column-head"><span class="column-name"><button class="copy-column" data-copy-column="${escapeHtml(column)}" title="Copy column name">${escapeHtml(column)}</button>${tableData.keys.includes(column) ? '<span class="key-attribute" title="Key attribute" aria-label="Key attribute">★</span>' : ''}</span><button class="sort-column ${sort.column === column ? 'active' : ''}" data-sort="${escapeHtml(column)}" aria-label="Sort by ${escapeHtml(column)}" aria-sort="${sort.column === column ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><span class="sort-indicator">${sort.column === column ? (sort.direction === 'asc' ? '▲' : '▼') : '⇅'}</span></button></span></th>`).join('')}<th class="actions actions-head">Actions</th></tr></thead><tbody>${visibleIndices.map((index) => { const item = tableData.items[index]; return `<tr><td class="select-cell"><input type="checkbox" data-select="${index}" aria-label="Select item ${index + 1}" ${selectedRows.has(index) ? 'checked' : ''}></td>${columns.map((column) => `<td class="attribute-cell copy-cell" data-copy-row="${index}" data-copy-field="${escapeHtml(column)}" title="Copy cell value">${renderAttribute(item[column], tableData.types[index][column] || 'NULL')}</td>`).join('')}<td class="actions"><button class="row-action view-edit-action" data-view="${index}" title="View or edit item" aria-label="View or edit item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.5 0 9.5 7 9.5 7s-4 7-9.5 7S2.5 12 2.5 12 6.5 5 12 5Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="row-action delete-action" data-delete="${index}" title="Delete item" aria-label="Delete item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></td></tr>`; }).join('')}</tbody></table></div>${visibleIndices.length ? '' : '<div class="filter-empty"><b>No matching items</b><span>Try another field or search term.</span></div>'}` : '<div class="empty"><b>Empty table</b><span>Add the first item to get started.</span></div>'}`;
 
   area.querySelector('#new-item').onclick = () => openEditor(container, tableName);
   area.querySelector('#refresh-items').onclick = () => loadItems(container, tableName);
@@ -260,7 +277,7 @@ export async function renderDynamo(container) {
     container.querySelector('#edit-item').onclick = () => setEditorMode(container, 'edit');
     container.querySelector('#copy-item').onclick = () => copyToClipboard(container.querySelector('#item-json').value, 'Item JSON');
     container.querySelector('#back-to-view').onclick = () => {
-      container.querySelector('#item-json').value = JSON.stringify(editingItem, null, 2);
+      container.querySelector('#item-json').value = editorJson(editingItem, tableData?.keys || []);
       setEditorMode(container, 'view');
     };
     container.querySelector('#save-item').onclick = async () => {

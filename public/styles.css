@@ -78,6 +78,8 @@ h3 { margin: 16px 0 5px; font-size: 14px; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th { padding: 11px 14px; background: #f8f9fb; color: #7c879a; font-size: 9px; letter-spacing: .8px; text-align: left; text-transform: uppercase; }
 .column-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.column-name { display: inline-flex; align-items: center; gap: 5px; }
+.key-attribute { color: #eab308; font-size: 12px; line-height: 1; }
 .copy-column, .sort-column { padding: 0; border: 0; color: inherit; background: none; font: inherit; font-weight: 700; letter-spacing: inherit; text-align: left; text-transform: inherit; }
 .copy-column { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .copy-column:hover { color: #6042d2; text-decoration: underline dotted; text-underline-offset: 3px; }
