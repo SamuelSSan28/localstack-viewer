@@ -5,9 +5,11 @@ Dashboard modular para visualizar recursos do LocalStack e trabalhar com dados l
 ## Funcionalidades
 
 - Visão geral de S3, SQS, SNS, Lambda, DynamoDB e SES.
-- Área DynamoDB com navegação por tabela, listagem, criação, edição e exclusão de itens.
+- Área DynamoDB com navegação por tabela, listagem, criação, edição e exclusão de itens, identificação dos tipos e visualização adequada para texto, número, booleano, nulo, lista e objeto.
+- Viewer SQS com filas separadas, leitura não destrutiva, payload JSON formatado, metadados e exclusão de mensagens.
+- Área SNS com tópicos, assinaturas e publicação de payloads de teste. Como SNS não armazena histórico, mensagens devem ser inspecionadas na fila SQS assinante.
 - Caixa de entrada SES para ler destinatários, assunto e conteúdo dos e-mails enviados localmente.
-- API separada em router, serviços e codecs, sem dependências de runtime.
+- UI responsiva baseada em Bootstrap 5 e componentes próprios, com API separada em router, serviços e codecs.
 
 ## Pré-requisito
 
@@ -105,5 +107,9 @@ LOCALSTACK_ENDPOINT=http://192.168.1.50:4566 VIEWER_PORT=8080 docker compose up 
 - `GET /api/health` — saúde do viewer.
 - `GET /api/services` — recursos encontrados e estado de cada serviço.
 - `GET /api/emails` — mensagens capturadas pelo SES local.
+- `GET /api/sqs/queues` — filas SQS.
+- `GET|DELETE /api/sqs/messages?queueUrl=...` — leitura e exclusão de mensagens.
+- `GET /api/sns/topics` — tópicos SNS.
+- `GET|POST /api/sns/topic?topicArn=...` — assinaturas e publicação de mensagem de teste.
 - `GET /api/dynamodb/tables` — tabelas DynamoDB.
 - `GET|PUT|DELETE /api/dynamodb/tables/:table/items` — consulta e manutenção dos itens.

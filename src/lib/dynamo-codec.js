@@ -24,6 +24,10 @@ export function marshallValue(value) {
   throw new TypeError(`Tipo DynamoDB não suportado: ${typeof value}`);
 }
 
-export function marshall(item = {}) {
-  return Object.fromEntries(Object.entries(item).map(([key, value]) => [key, marshallValue(value)]));
+export function marshall(item = {}, types = {}) {
+  return Object.fromEntries(Object.entries(item).map(([key, value]) => {
+    if (types[key] === 'SS') return [key, { SS: value.map(String) }];
+    if (types[key] === 'NS') return [key, { NS: value.map(String) }];
+    return [key, marshallValue(value)];
+  }));
 }

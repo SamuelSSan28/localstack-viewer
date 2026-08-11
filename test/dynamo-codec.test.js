@@ -22,6 +22,13 @@ test('decodifica conjuntos retornados pelo DynamoDB', () => {
   });
 });
 
+test('preserva tipos de conjunto ao salvar um item editado', () => {
+  assert.deepEqual(marshall({ roles: ['reader'], scores: [1, 2] }, { roles: 'SS', scores: 'NS' }), {
+    roles: { SS: ['reader'] },
+    scores: { NS: ['1', '2'] },
+  });
+});
+
 test('rejeita valores incompatíveis', () => {
   assert.throws(() => marshall({ invalid: undefined }), /não suportado/);
 });

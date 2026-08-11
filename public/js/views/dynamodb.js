@@ -3,8 +3,20 @@ import { escapeHtml, setStatus, showError, showLoading } from '../ui.js';
 
 let currentTable = '';
 let tableData;
+let editingTypes = {};
 
-function openEditor(container, item = {}) {
+const typeNames = { S: 'Texto', N: 'Número', BOOL: 'Booleano', NULL: 'Nulo', M: 'Objeto', L: 'Lista', SS: 'Textos', NS: 'Números', B: 'Binário' };
+
+function renderAttribute(value, type) {
+  const label = `<span class="attribute-type type-${escapeHtml(type)}">${escapeHtml(typeNames[type] || type)}</span>`;
+  if (type === 'BOOL') return `${label}<span class="boolean-value ${value ? 'true' : 'false'}">${value ? 'true' : 'false'}</span>`;
+  if (type === 'NULL') return `${label}<span class="null-value">null</span>`;
+  if (['M', 'L', 'SS', 'NS'].includes(type)) return `${label}<details class="inline-json"><summary>${Array.isArray(value) ? `${value.length} item(ns)` : 'Ver objeto'}</summary><pre>${escapeHtml(JSON.stringify(value, null, 2))}</pre></details>`;
+  return `${label}<code class="value-${escapeHtml(type)}">${escapeHtml(value ?? '—')}</code>`;
+}
+
+function openEditor(container, item = {}, types = {}) {
+  editingTypes = types;
   container.querySelector('#editor-title').textContent = Object.keys(item).length ? 'Editar item' : 'Novo item';
   container.querySelector('#item-json').value = JSON.stringify(item, null, 2);
   container.querySelector('#editor').showModal();
@@ -17,9 +29,9 @@ async function loadItems(container, tableName) {
   try {
     tableData = await api.table(tableName);
     const columns = [...new Set(tableData.items.flatMap(Object.keys))];
-    area.innerHTML = `<div class="table-toolbar"><div><span class="eyebrow">TABELA</span><h2>${escapeHtml(tableName)}</h2><p>${tableData.count} item(ns) · Chave: ${escapeHtml(tableData.keys.join(' + '))}</p></div><button class="button primary" id="new-item">＋ Novo item</button></div>${tableData.items.length ? `<div class="table-scroll"><table><thead><tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join('')}<th></th></tr></thead><tbody>${tableData.items.map((item, index) => `<tr>${columns.map((column) => `<td><code>${escapeHtml(typeof item[column] === 'object' ? JSON.stringify(item[column]) : item[column] ?? '—')}</code></td>`).join('')}<td class="actions"><button data-edit="${index}" title="Editar">✎</button><button data-delete="${index}" title="Excluir">⌫</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><b>Tabela vazia</b><span>Adicione o primeiro item para começar.</span></div>'}`;
+    area.innerHTML = `<div class="table-toolbar"><div><span class="eyebrow">TABELA</span><h2>${escapeHtml(tableName)}</h2><p>${tableData.count} item(ns) · Chave: ${escapeHtml(tableData.keys.join(' + '))}</p></div><button class="button primary" id="new-item">＋ Novo item</button></div>${tableData.items.length ? `<div class="table-scroll"><table><thead><tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join('')}<th></th></tr></thead><tbody>${tableData.items.map((item, index) => `<tr>${columns.map((column) => `<td class="attribute-cell">${renderAttribute(item[column], tableData.types[index][column] || 'NULL')}</td>`).join('')}<td class="actions"><button data-edit="${index}" title="Editar">✎</button><button data-delete="${index}" title="Excluir">⌫</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><b>Tabela vazia</b><span>Adicione o primeiro item para começar.</span></div>'}`;
     area.querySelector('#new-item').onclick = () => openEditor(container);
-    area.querySelectorAll('[data-edit]').forEach((button) => button.onclick = () => openEditor(container, tableData.items[button.dataset.edit]));
+    area.querySelectorAll('[data-edit]').forEach((button) => button.onclick = () => openEditor(container, tableData.items[button.dataset.edit], tableData.types[button.dataset.edit]));
     area.querySelectorAll('[data-delete]').forEach((button) => button.onclick = async () => {
       const item = tableData.items[button.dataset.delete];
       const key = Object.fromEntries(tableData.keys.map((name) => [name, item[name]]));
@@ -41,7 +53,7 @@ export async function renderDynamo(container) {
     });
     container.querySelector('#editor').addEventListener('close', async (event) => {
       if (event.target.returnValue !== 'default') return;
-      try { await api.saveItem(currentTable, JSON.parse(container.querySelector('#item-json').value)); setStatus('Item salvo com sucesso'); await loadItems(container, currentTable); } catch (error) { setStatus(error.message, 'error'); }
+      try { await api.saveItem(currentTable, JSON.parse(container.querySelector('#item-json').value), editingTypes); setStatus('Item salvo com sucesso'); await loadItems(container, currentTable); } catch (error) { setStatus(error.message, 'error'); }
     });
     if (tables[0]) loadItems(container, tables[0]);
   } catch (error) { showError(container, error); }

@@ -13,12 +13,15 @@ export async function getTable(tableName) {
   return {
     keys: description.Table.KeySchema.map((key) => key.AttributeName),
     items: (scan.Items || []).map(unmarshall),
+    types: (scan.Items || []).map((item) => Object.fromEntries(
+      Object.entries(item).map(([name, value]) => [name, Object.keys(value)[0]]),
+    )),
     count: scan.Count || 0,
   };
 }
 
-export async function saveItem(tableName, item) {
-  await dynamoRequest('PutItem', { TableName: tableName, Item: marshall(item) });
+export async function saveItem(tableName, item, types = {}) {
+  await dynamoRequest('PutItem', { TableName: tableName, Item: marshall(item, types) });
   return item;
 }
 

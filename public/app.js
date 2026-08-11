@@ -1,8 +1,10 @@
 import { renderDynamo } from './js/views/dynamodb.js';
 import { renderEmails } from './js/views/emails.js';
 import { renderOverview } from './js/views/overview.js';
+import { renderSqs } from './js/views/sqs.js';
+import { renderSns } from './js/views/sns.js';
 
-const views = { overview: renderOverview, dynamodb: renderDynamo, emails: renderEmails };
+const views = { overview: renderOverview, dynamodb: renderDynamo, sqs: renderSqs, sns: renderSns, emails: renderEmails };
 const container = document.querySelector('#view');
 
 function navigate(view) {

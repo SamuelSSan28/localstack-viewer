@@ -27,4 +27,9 @@ export async function dynamoRequest(action, payload = {}) {
 }
 
 export const xmlValues = (xml, tag) => [...xml.matchAll(new RegExp(`<${tag}>(.*?)</${tag}>`, 'gs'))]
-  .map((match) => match[1]);
+  .map((match) => match[1]
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&amp;', '&'));
