@@ -35,10 +35,12 @@ test('keeps one full-height JSON editor for both view and edit modes', async () 
   assert.doesNotMatch(view, /item-json-preview|editor-view|editor-edit/);
 });
 
-test('offers explicit row actions and clipboard controls', async () => {
+test('offers compact, accessible row actions and clipboard controls', async () => {
   const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
-  assert.match(view, /data-view=.*View \/ Edit/);
-  assert.match(view, /data-delete=.*Delete/);
+  const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
+  assert.match(view, /data-view=.*aria-label="View or edit item".*<svg/);
+  assert.match(view, /data-delete=.*aria-label="Delete item".*<svg/);
+  assert.match(css, /\.actions \{[^}]*width: 78px;[^}]*min-width: 78px;/);
   assert.match(view, /data-copy-row/);
   assert.match(view, /data-copy-column/);
   assert.match(view, /id="copy-item".*Copy all/);
