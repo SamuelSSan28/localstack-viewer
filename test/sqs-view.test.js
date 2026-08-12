@@ -7,7 +7,8 @@ test('reads the sent timestamp from SQS system attributes', async (context) => {
   const originalFetch = global.fetch;
   context.after(() => { global.fetch = originalFetch; });
   const requests = [];
-  global.fetch = async (url) => {
+  global.fetch = async (url, options) => {
+    if (options?.headers?.['X-Amz-Target']) return Response.json(options.headers['X-Amz-Target'].endsWith('.Query') ? { Items: [] } : {});
     requests.push(url);
     if (url.includes('/_aws/sqs/messages')) return new Response('', { status: 404 });
     if (url.includes('Action=ChangeMessageVisibilityBatch')) return new Response('<ChangeMessageVisibilityBatchResponse/>');
@@ -36,7 +37,9 @@ test('reads subsequent batches and restores every message immediately', async (c
   context.after(() => { global.fetch = originalFetch; });
   let receiveCount = 0;
   const restored = [];
-  global.fetch = async (url) => {
+  const receiveRequests = [];
+  global.fetch = async (url, options) => {
+    if (options?.headers?.['X-Amz-Target']) return Response.json(options.headers['X-Amz-Target'].endsWith('.Query') ? { Items: [] } : {});
     const request = new URL(url);
     if (request.pathname === '/_aws/sqs/messages') return new Response('', { status: 404 });
     if (request.searchParams.get('Action') === 'ChangeMessageVisibilityBatch') {
@@ -45,6 +48,7 @@ test('reads subsequent batches and restores every message immediately', async (c
       return new Response('<ChangeMessageVisibilityBatchResponse/>');
     }
     receiveCount += 1;
+    receiveRequests.push(request);
     if (receiveCount > 2) return new Response('<ReceiveMessageResponse><ReceiveMessageResult/></ReceiveMessageResponse>');
     const start = receiveCount === 1 ? 0 : 10;
     const count = receiveCount === 1 ? 10 : 2;
@@ -56,14 +60,39 @@ test('reads subsequent batches and restores every message immediately', async (c
 
   assert.equal(messages.length, 12);
   assert.equal(receiveCount, 10);
+  assert.ok(receiveRequests.every((request) => request.searchParams.get('VisibilityTimeout') === '60'));
   assert.deepEqual(restored.sort(), Array.from({ length: 12 }, (_, index) => `receipt-${index}`).sort());
+});
+
+test('keeps cleaning later batches when an earlier visibility restore fails', async (context) => {
+  const originalFetch = global.fetch;
+  context.after(() => { global.fetch = originalFetch; });
+  let receiveCount = 0;
+  let cleanupCount = 0;
+  global.fetch = async (url) => {
+    const request = new URL(url);
+    if (request.pathname === '/_aws/sqs/messages') return new Response('', { status: 404 });
+    if (request.searchParams.get('Action') === 'ChangeMessageVisibilityBatch') {
+      cleanupCount += 1;
+      return cleanupCount === 1 ? new Response('failed', { status: 500 }) : new Response('<ok/>');
+    }
+    receiveCount += 1;
+    const messages = receiveCount <= 2
+      ? Array.from({ length: 10 }, (_, index) => `<Message><MessageId>${receiveCount}-${index}</MessageId><ReceiptHandle>${receiveCount}-${index}</ReceiptHandle><Body>{}</Body></Message>`).join('')
+      : '';
+    return new Response(`<ReceiveMessageResponse>${messages}</ReceiveMessageResponse>`);
+  };
+
+  await assert.rejects(receiveMessages('http://localhost:4566/000000000000/events'), /LocalStack HTTP 500/);
+  assert.equal(cleanupCount, 2);
 });
 
 test('uses the LocalStack peek endpoint without consuming or hiding messages', async (context) => {
   const originalFetch = global.fetch;
   context.after(() => { global.fetch = originalFetch; });
   const requests = [];
-  global.fetch = async (url) => {
+  global.fetch = async (url, options) => {
+    if (options?.headers?.['X-Amz-Target']) return Response.json(options.headers['X-Amz-Target'].endsWith('.Query') ? { Items: [] } : {});
     requests.push(new URL(url));
     return new Response(`<ReceiveMessageResponse><ReceiveMessageResult>
       <Message><MessageId>new-message</MessageId><ReceiptHandle>receipt</ReceiptHandle><Body>{}</Body>

@@ -14,7 +14,7 @@ export const api = {
   deleteItem: (name, key, schema = {}) => request(`/api/dynamodb/tables/${encodeURIComponent(name)}/items`, { method: 'DELETE', body: JSON.stringify({ key, schema }) }),
   queues: () => request('/api/sqs/queues'),
   messages: (queueUrl) => request(`/api/sqs/messages?queueUrl=${encodeURIComponent(queueUrl)}`),
-  deleteMessage: (queueUrl, receiptHandle) => request(`/api/sqs/messages?queueUrl=${encodeURIComponent(queueUrl)}`, { method: 'DELETE', body: JSON.stringify({ receiptHandle }) }),
+  deleteMessage: (queueUrl, messageId, receiptHandle) => request(`/api/sqs/messages?queueUrl=${encodeURIComponent(queueUrl)}`, { method: 'DELETE', body: JSON.stringify({ messageId, receiptHandle }) }),
   topics: () => request('/api/sns/topics'),
   topic: (topicArn) => request(`/api/sns/topic?topicArn=${encodeURIComponent(topicArn)}`),
   publish: (topicArn, message, subject) => request(`/api/sns/topic?topicArn=${encodeURIComponent(topicArn)}`, { method: 'POST', body: JSON.stringify({ message, subject }) }),
