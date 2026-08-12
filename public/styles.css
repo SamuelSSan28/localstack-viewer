@@ -70,14 +70,17 @@ h3 { margin: 16px 0 5px; font-size: 14px; }
 .button:disabled { cursor: default; opacity: .45; }
 .bulk-delete { white-space: nowrap; }
 .bulk-delete span:not(:empty) { margin-left: 4px; padding: 2px 6px; border-radius: 10px; color: white; background: #c45a5a; }
-.table-scroll { overflow: auto; border: 1px solid #e5e9ef; border-radius: 9px; }
+.table-scroll { max-width: 100%; overflow: auto; border: 1px solid #e5e9ef; border-radius: 9px; }
+.table-pagination { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 13px 2px 0; color: #8791a5; font-size: 11px; }
+.table-pagination > div { display: flex; align-items: center; gap: 10px; }
+.table-pagination .button { padding: 7px 10px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; font-weight: 500; }
 th { padding: 11px 14px; background: #f8f9fb; color: #667287; font-size: 10px; font-weight: 700; letter-spacing: .8px; text-align: left; text-transform: uppercase; }
 .column-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .column-name { display: inline-flex; align-items: center; gap: 5px; }
 .key-attribute { color: #eab308; font-size: 12px; line-height: 1; }
 .copy-column, .sort-column, .pin-field { padding: 0; border: 0; color: inherit; background: none; font: inherit; font-weight: 700; letter-spacing: inherit; text-align: left; text-transform: inherit; }
-.copy-column { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copy-column { overflow: hidden; color: #667287; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 .copy-column:hover { color: #6042d2; text-decoration: underline dotted; text-underline-offset: 3px; }
 .sort-column { display: inline-grid; flex: 0 0 26px; width: 26px; height: 26px; place-items: center; border-radius: 6px; }
 .sort-column:hover, .sort-column:focus-visible, .sort-column.active { color: #5132c7; background: #e9e4fb; outline: none; }
@@ -232,6 +235,7 @@ th, .message-meta { color: #929db0; background: #172033; }
 .sort-indicator { color: #b8c2d3; }
 .sort-column:hover, .sort-column:focus-visible, .sort-column.active { color: #c4b8ff; background: #302852; }
 .sort-column.active .sort-indicator { color: #c4b8ff; }
+.copy-column { color: #aab4c7; }
 td, .message-meta, .mail-item, .reader-head, .subscription-list article { border-color: #273247; }
 tbody tr:hover { background: #191b34; }
 .copy-cell:hover { background: #272145; outline-color: #40356f; }
