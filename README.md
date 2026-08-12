@@ -34,6 +34,16 @@ docker run -d \
 
 Open [http://localhost:8888](http://localhost:8888).
 
+### ARM64 hosts
+
+The image is published for both `linux/amd64` and `linux/arm64`. Docker
+automatically selects the image that matches the host architecture, so the same
+pull and run commands work on Intel/AMD and ARM64 hosts:
+
+```bash
+docker pull ghcr.io/samuelssan28/localstack-viewer:latest
+```
+
 ### LocalStack on another host
 
 Set `LOCALSTACK_ENDPOINT` to an address reachable **from inside the container**:
