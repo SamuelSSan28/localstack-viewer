@@ -17,7 +17,21 @@ export async function listQueues() {
   return xmlValues(xml, 'QueueUrl').map((url) => ({ name: url.split('/').pop(), url }));
 }
 
-export async function receiveMessages(queueUrl) {
+async function peekMessages(queueUrl) {
+  const query = new URLSearchParams({ QueueUrl: queueUrl, ShowInvisible: 'true', ShowDelayed: 'true' });
+  const response = await localstackRequest(`/_aws/sqs/messages?${query}`);
+  return xmlValues(await response.text(), 'Message');
+}
+
+async function receiveMessageBlocks(queueUrl) {
+  // LocalStack's developer endpoint reads the queue without changing message
+  // visibility. Fall back to the public SQS API for older LocalStack versions.
+  try {
+    return await peekMessages(queueUrl);
+  } catch (error) {
+    if (!String(error.message).includes('HTTP 404')) throw error;
+  }
+
   // Temporarily hide each batch so the next receive can move past it. Every
   // receipt is restored below, and SQS also restores it after ten seconds if
   // the scan is interrupted. Receiving never deletes a message.
@@ -46,6 +60,11 @@ export async function receiveMessages(queueUrl) {
       await sqs('ChangeMessageVisibilityBatch', parameters);
     }
   }
+  return blocks;
+}
+
+export async function receiveMessages(queueUrl) {
+  const blocks = await receiveMessageBlocks(queueUrl);
   const uniqueBlocks = [...new Map(blocks.map((block) => [xmlValues(block, 'MessageId')[0], block])).values()];
   return uniqueBlocks.map((block) => {
     const body = xmlValues(block, 'Body')[0] || '';

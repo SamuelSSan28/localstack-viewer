@@ -9,6 +9,7 @@ test('reads the sent timestamp from SQS system attributes', async (context) => {
   const requests = [];
   global.fetch = async (url) => {
     requests.push(url);
+    if (url.includes('/_aws/sqs/messages')) return new Response('', { status: 404 });
     if (url.includes('Action=ChangeMessageVisibilityBatch')) return new Response('<ChangeMessageVisibilityBatchResponse/>');
     if (requests.filter((request) => request.includes('Action=ReceiveMessage')).length > 1) {
       return new Response('<ReceiveMessageResponse><ReceiveMessageResult/></ReceiveMessageResponse>');
@@ -37,6 +38,7 @@ test('reads subsequent batches and restores every message immediately', async (c
   const restored = [];
   global.fetch = async (url) => {
     const request = new URL(url);
+    if (request.pathname === '/_aws/sqs/messages') return new Response('', { status: 404 });
     if (request.searchParams.get('Action') === 'ChangeMessageVisibilityBatch') {
       restored.push(...[...request.searchParams.entries()]
         .filter(([name]) => name.endsWith('.ReceiptHandle')).map(([, value]) => value));
@@ -55,6 +57,27 @@ test('reads subsequent batches and restores every message immediately', async (c
   assert.equal(messages.length, 12);
   assert.equal(receiveCount, 10);
   assert.deepEqual(restored.sort(), Array.from({ length: 12 }, (_, index) => `receipt-${index}`).sort());
+});
+
+test('uses the LocalStack peek endpoint without consuming or hiding messages', async (context) => {
+  const originalFetch = global.fetch;
+  context.after(() => { global.fetch = originalFetch; });
+  const requests = [];
+  global.fetch = async (url) => {
+    requests.push(new URL(url));
+    return new Response(`<ReceiveMessageResponse><ReceiveMessageResult>
+      <Message><MessageId>new-message</MessageId><ReceiptHandle>receipt</ReceiptHandle><Body>{}</Body>
+      <Attribute><Name>SentTimestamp</Name><Value>1786492800000</Value></Attribute></Message>
+    </ReceiveMessageResult></ReceiveMessageResponse>`);
+  };
+
+  const messages = await receiveMessages('http://localhost:4566/000000000000/events');
+
+  assert.equal(messages.length, 1);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].pathname, '/_aws/sqs/messages');
+  assert.equal(requests[0].searchParams.get('ShowInvisible'), 'true');
+  assert.equal(requests[0].searchParams.get('ShowDelayed'), 'true');
 });
 
 test('identifies common SQS event type fields', () => {
