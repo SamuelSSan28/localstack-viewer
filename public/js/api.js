@@ -18,4 +18,13 @@ export const api = {
   topics: () => request('/api/sns/topics'),
   topic: (topicArn) => request(`/api/sns/topic?topicArn=${encodeURIComponent(topicArn)}`),
   publish: (topicArn, message, subject) => request(`/api/sns/topic?topicArn=${encodeURIComponent(topicArn)}`, { method: 'POST', body: JSON.stringify({ message, subject }) }),
+  buckets: () => request('/api/s3/buckets'),
+  createBucket: (name) => request('/api/s3/buckets', { method: 'POST', body: JSON.stringify({ name }) }),
+  deleteBucket: (name) => request('/api/s3/buckets', { method: 'DELETE', body: JSON.stringify({ name }) }),
+  objects: (bucket, prefix = '') => request(`/api/s3/objects?bucket=${encodeURIComponent(bucket)}&prefix=${encodeURIComponent(prefix)}`),
+  object: (bucket, key) => request(`/api/s3/objects?bucket=${encodeURIComponent(bucket)}&key=${encodeURIComponent(key)}`),
+  uploadObject: (bucket, object) => request(`/api/s3/objects?bucket=${encodeURIComponent(bucket)}`, { method: 'POST', body: JSON.stringify(object) }),
+  updateObject: (bucket, key, object) => request(`/api/s3/objects?bucket=${encodeURIComponent(bucket)}&key=${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify(object) }),
+  deleteObject: (bucket, key) => request(`/api/s3/objects?bucket=${encodeURIComponent(bucket)}&key=${encodeURIComponent(key)}`, { method: 'DELETE', body: '{}' }),
+  objectDownloadUrl: (bucket, key) => `/api/s3/objects?bucket=${encodeURIComponent(bucket)}&key=${encodeURIComponent(key)}&download=1`,
 };

@@ -3,8 +3,9 @@ import { renderEmails } from './js/views/emails.js';
 import { renderOverview } from './js/views/overview.js';
 import { renderSqs } from './js/views/sqs.js';
 import { renderSns } from './js/views/sns.js';
+import { renderS3 } from './js/views/s3.js';
 
-const views = { overview: renderOverview, dynamodb: renderDynamo, sqs: renderSqs, sns: renderSns, emails: renderEmails };
+const views = { overview: renderOverview, s3: renderS3, dynamodb: renderDynamo, sqs: renderSqs, sns: renderSns, emails: renderEmails };
 const container = document.querySelector('#view');
 
 function navigate(view) {
