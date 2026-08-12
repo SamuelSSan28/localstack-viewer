@@ -3,6 +3,7 @@ import { deleteItem, getTable, listTables, saveItem } from './services/dynamodb-
 import { listEmails } from './services/email-service.js';
 import { deleteMessage, listQueues, receiveMessages } from './services/sqs-service.js';
 import { getTopic, listTopics, publishMessage } from './services/sns-service.js';
+import { createBucket, deleteBucket, deleteObject, downloadObject, getObject, listBuckets, listObjects, updateObject, uploadObject } from './services/s3-service.js';
 import { readJson, sendJson } from './http.js';
 
 export async function routeApi(request, response, url) {
@@ -12,6 +13,37 @@ export async function routeApi(request, response, url) {
   if (url.pathname === '/api/dynamodb/tables') return sendJson(response, 200, { tables: await listTables() });
   if (url.pathname === '/api/sqs/queues') return sendJson(response, 200, { queues: await listQueues() });
   if (url.pathname === '/api/sns/topics') return sendJson(response, 200, { topics: await listTopics() });
+  if (url.pathname === '/api/s3/buckets') {
+    if (request.method === 'GET') return sendJson(response, 200, { buckets: await listBuckets() });
+    const { name } = await readJson(request);
+    if (!name) throw Object.assign(new Error('Bucket name is required'), { status: 400 });
+    if (request.method === 'POST') return sendJson(response, 201, { bucket: await createBucket(name) });
+    if (request.method === 'DELETE') { await deleteBucket(name); return sendJson(response, 200, { ok: true }); }
+  }
+  if (url.pathname === '/api/s3/objects') {
+    const bucket = url.searchParams.get('bucket');
+    const key = url.searchParams.get('key');
+    if (!bucket) throw Object.assign(new Error('bucket is required'), { status: 400 });
+    if (request.method === 'GET' && !key) return sendJson(response, 200, await listObjects(bucket, url.searchParams.get('prefix') || ''));
+    if (request.method === 'GET' && key && url.searchParams.has('download')) {
+      const remote = await downloadObject(bucket, key);
+      const headers = { 'Content-Type': remote.headers.get('content-type') || 'application/octet-stream', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(key.split('/').pop())}` };
+      const length = remote.headers.get('content-length');
+      if (length) headers['Content-Length'] = length;
+      response.writeHead(200, headers);
+      response.end(Buffer.from(await remote.arrayBuffer()));
+      return;
+    }
+    if (request.method === 'GET' && key) return sendJson(response, 200, { object: await getObject(bucket, key) });
+    const body = await readJson(request);
+    if (request.method === 'POST') {
+      if (!body.key || typeof body.content !== 'string') throw Object.assign(new Error('key and content are required'), { status: 400 });
+      return sendJson(response, 201, { object: await uploadObject(bucket, body.key, body.content, body.contentType, body.metadata) });
+    }
+    if (!key) throw Object.assign(new Error('key is required'), { status: 400 });
+    if (request.method === 'PUT') return sendJson(response, 200, { object: await updateObject(bucket, key, body.contentType, body.metadata) });
+    if (request.method === 'DELETE') { await deleteObject(bucket, key); return sendJson(response, 200, { ok: true }); }
+  }
 
   if (url.pathname === '/api/sqs/messages') {
     const queueUrl = url.searchParams.get('queueUrl');
