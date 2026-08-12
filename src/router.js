@@ -18,9 +18,9 @@ export async function routeApi(request, response, url) {
     if (!queueUrl) throw Object.assign(new Error('queueUrl is required'), { status: 400 });
     if (request.method === 'GET') return sendJson(response, 200, { messages: await receiveMessages(queueUrl) });
     if (request.method === 'DELETE') {
-      const { receiptHandle } = await readJson(request);
-      if (!receiptHandle) throw Object.assign(new Error('receiptHandle is required'), { status: 400 });
-      await deleteMessage(queueUrl, receiptHandle);
+      const { messageId, receiptHandle } = await readJson(request);
+      if (!messageId) throw Object.assign(new Error('messageId is required'), { status: 400 });
+      await deleteMessage(queueUrl, messageId, receiptHandle);
       return sendJson(response, 200, { ok: true });
     }
   }

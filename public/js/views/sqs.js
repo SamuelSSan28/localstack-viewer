@@ -97,7 +97,8 @@ async function loadMessages(container, queue) {
         : `<div class="empty"><b>${messages.length ? 'No messages match' : 'No visible messages'}</b><span>${messages.length ? 'Try changing the search or event type filter.' : 'Send a message or refresh this page.'}</span></div>`;
       grid.querySelectorAll('[data-remove]').forEach((button) => button.onclick = async () => {
         if (!confirm('Permanently delete this message?')) return;
-        try { await api.deleteMessage(queue.url, messages[button.dataset.remove].receiptHandle); setStatus('Message deleted'); await loadMessages(container, queue); } catch (error) { setStatus(error.message, 'error'); }
+        const message = messages[button.dataset.remove];
+        try { await api.deleteMessage(queue.url, message.id, message.archived ? null : message.receiptHandle); setStatus('Message deleted'); await loadMessages(container, queue); } catch (error) { setStatus(error.message, 'error'); }
       });
     };
     [search, filter, emailFilter, sort].forEach((control) => control.addEventListener(control === search ? 'input' : 'change', renderMessages));
