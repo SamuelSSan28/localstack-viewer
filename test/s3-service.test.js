@@ -1,6 +1,36 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getObject, listBuckets, listObjects, updateObject, uploadObject } from '../src/services/s3-service.js';
+import { createBucket, getObject, listBuckets, listObjects, updateObject, uploadObject } from '../src/services/s3-service.js';
+import { localstack } from '../src/lib/localstack.js';
+
+test('creates buckets with the configured regional constraint', async (context) => {
+  const originalFetch = global.fetch;
+  const originalRegion = localstack.region;
+  context.after(() => { global.fetch = originalFetch; localstack.region = originalRegion; });
+  const requests = [];
+  global.fetch = async (url, options) => { requests.push({ url, options }); return new Response(''); };
+
+  localstack.region = 'sa-east-1';
+  assert.deepEqual(await createBucket('arquivos'), { name: 'arquivos' });
+  assert.equal(requests[0].url, 'http://localhost:4566/arquivos');
+  assert.equal(requests[0].options.method, 'PUT');
+  assert.equal(requests[0].options.headers['Content-Type'], 'application/xml');
+  assert.match(requests[0].options.body, /<LocationConstraint>sa-east-1<\/LocationConstraint>/);
+});
+
+test('creates us-east-1 buckets without a location constraint', async (context) => {
+  const originalFetch = global.fetch;
+  const originalRegion = localstack.region;
+  context.after(() => { global.fetch = originalFetch; localstack.region = originalRegion; });
+  let request;
+  global.fetch = async (url, options) => { request = { url, options }; return new Response(''); };
+
+  localstack.region = 'us-east-1';
+  await createBucket('assets');
+  assert.equal(request.options.method, 'PUT');
+  assert.equal(request.options.body, undefined);
+  assert.equal(request.options.headers, undefined);
+});
 
 test('lists S3 buckets and object metadata from XML responses', async (context) => {
   const originalFetch = global.fetch;
