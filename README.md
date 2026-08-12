@@ -2,6 +2,9 @@
 
 A browser dashboard for inspecting resources in an existing LocalStack instance, including DynamoDB tables, SQS queues, SNS topics, SES emails, and service counts.
 
+<img width="1897" height="952" alt="image" src="https://github.com/user-attachments/assets/ca0d5ea5-9004-4ad3-9714-9adae3cd700c" />
+
+
 ## Requirements
 
 - Docker
