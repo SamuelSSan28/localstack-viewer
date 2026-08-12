@@ -152,6 +152,7 @@ textarea { width: 100%; min-height: 290px; resize: vertical; padding: 15px; bord
 .resource-option small { color: #98a1b1; font-size: 9px; }
 #queue-content, #topic-content { min-width: 0; padding: 25px; }
 .message-grid { display: grid; gap: 14px; }
+.message-pagination { margin-top: 2px; }
 .message-tools { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(150px, 1fr)) auto; align-items: end; gap: 12px; margin-bottom: 18px; padding: 16px; border: 1px solid #dfe4ec; border-radius: 12px; background: #f8f9fb; }
 .message-tools label { display: grid; flex: 1 1 180px; gap: 6px; color: #59667c; font-size: 11px; font-weight: 700; }
 .message-tools label:first-child { flex-grow: 2; }

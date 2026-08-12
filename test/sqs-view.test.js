@@ -1,8 +1,45 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { eventTypeOf, userEmailOf } from '../public/js/views/sqs.js';
-import { receiveMessages } from '../src/services/sqs-service.js';
+import { eventTypeOf, MESSAGE_PAGE_SIZE, userEmailOf } from '../public/js/views/sqs.js';
+import { deleteMessage, receiveMessages } from '../src/services/sqs-service.js';
+
+test('paginates filtered SQS messages ten at a time', async () => {
+  const view = await readFile(new URL('../public/js/views/sqs.js', import.meta.url), 'utf8');
+  assert.equal(MESSAGE_PAGE_SIZE, 10);
+  assert.match(view, /visible\.slice\(pageStart, pageStart \+ MESSAGE_PAGE_SIZE\)/);
+  assert.match(view, /aria-label="Message pagination"/);
+  assert.match(view, /currentPage = 1;\s+renderMessages\(\);/);
+});
+
+test('refreshes an invalid peek receipt handle before deleting a message', async (context) => {
+  const originalFetch = global.fetch;
+  context.after(() => { global.fetch = originalFetch; });
+  const actions = [];
+  global.fetch = async (url, options) => {
+    if (options?.headers?.['X-Amz-Target']) return Response.json({});
+    const request = new URL(url);
+    const action = request.searchParams.get('Action');
+    actions.push({ action, request });
+    if (action === 'DeleteMessage' && request.searchParams.get('ReceiptHandle') === 'peek-receipt') {
+      return new Response('<Error><Code>ReceiptHandleIsInvalid</Code></Error>', { status: 400 });
+    }
+    if (action === 'ReceiveMessage') {
+      return new Response(`<ReceiveMessageResponse><Message><MessageId>keep</MessageId><ReceiptHandle>keep-receipt</ReceiptHandle></Message>
+        <Message><MessageId>delete-me</MessageId><ReceiptHandle>fresh-receipt</ReceiptHandle></Message></ReceiveMessageResponse>`);
+    }
+    return new Response('<ok/>');
+  };
+
+  await deleteMessage('http://localhost:4566/000000000000/events', 'delete-me', 'peek-receipt');
+
+  assert.equal(actions.filter(({ action }) => action === 'DeleteMessage').length, 2);
+  assert.ok(actions.some(({ action, request }) => action === 'DeleteMessage'
+    && request.searchParams.get('ReceiptHandle') === 'fresh-receipt'));
+  const restore = actions.find(({ action }) => action === 'ChangeMessageVisibilityBatch').request;
+  assert.equal(restore.searchParams.get('ChangeMessageVisibilityBatchRequestEntry.1.ReceiptHandle'), 'keep-receipt');
+  assert.equal(restore.searchParams.get('ChangeMessageVisibilityBatchRequestEntry.1.VisibilityTimeout'), '0');
+});
 
 test('reads the sent timestamp from SQS system attributes', async (context) => {
   const originalFetch = global.fetch;
