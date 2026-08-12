@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { eventTypeOf, userEmailOf } from '../public/js/views/sqs.js';
 import { receiveMessages } from '../src/services/sqs-service.js';
@@ -129,6 +130,11 @@ test('identifies event types inside SNS message envelopes', () => {
 test('labels untyped JSON and text messages clearly', () => {
   assert.equal(eventTypeOf({ json: { payload: true } }), 'JSON event');
   assert.equal(eventTypeOf({ json: null }), 'Text message');
+});
+
+test('does not show a redundant JSON format badge in message cards', async () => {
+  const view = await readFile(new URL('../public/js/views/sqs.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(view, /class="type-badge"/);
 });
 
 test('identifies available user emails in common payload shapes', () => {

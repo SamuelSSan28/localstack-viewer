@@ -51,7 +51,6 @@ const bodyView = (message) => message.json
 const messageCard = (message, originalIndex) => `<article class="message-card">
   <div class="message-meta">
     <span class="event-type-badge" title="Event type">${escapeHtml(eventTypeOf(message))}</span>
-    <span class="type-badge">${message.json ? 'JSON' : 'TEXT'}</span>
     ${userEmailOf(message) ? `<span class="message-user" title="User email">${escapeHtml(userEmailOf(message))}</span>` : ''}
     <time datetime="${timestampOf(message) ? new Date(timestampOf(message)).toISOString() : ''}">${escapeHtml(formattedTime(message))}</time>
     <code title="${escapeHtml(message.id)}">${escapeHtml(message.id)}</code>

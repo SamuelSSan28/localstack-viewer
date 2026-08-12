@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { clipboardValue, compareDynamoValues, orderedFieldNames, orderJsonValue, structuredPreview } from '../public/js/views/dynamodb.js';
+import { clipboardValue, compareDynamoValues, orderedFieldNames, orderJsonValue, PAGE_SIZE, structuredPreview } from '../public/js/views/dynamodb.js';
+
+test('limits DynamoDB table pages to ten rows', async () => {
+  const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
+  assert.equal(PAGE_SIZE, 10);
+  assert.match(view, /visibleIndices\.slice\(pageStart, pageStart \+ PAGE_SIZE\)/);
+  assert.match(view, /class="table-pagination"/);
+  assert.match(css, /\.table-scroll \{ max-width: 100%; overflow: auto;/);
+});
 
 test('places DynamoDB keys first and sorts remaining fields alphabetically', () => {
   const items = [{ zebra: 1, sortKey: 2 }, { alpha: 3, partitionKey: 4 }];
@@ -61,6 +70,7 @@ test('offers compact, accessible row actions and clipboard controls', async () =
   assert.match(view, /data-copy-row/);
   assert.match(view, /data-copy-column/);
   assert.match(view, /id="copy-item".*Copy all/);
+  assert.match(css, /\.copy-column \{[^}]*color: #667287;[^}]*font-weight: 800;/);
 });
 
 test('marks key columns with an accessible star', async () => {

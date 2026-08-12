@@ -2,8 +2,10 @@ import { api } from '../api.js';
 import { escapeHtml, setStatus, showError, showLoading } from '../ui.js';
 
 const STORAGE_KEY = 'localstack-viewer:dynamodb';
+export const PAGE_SIZE = 10;
 let currentTable = '';
 let tableData;
+let currentPage = 1;
 let editingSchema = {};
 let editingTable = '';
 let editingItem = {};
@@ -201,20 +203,25 @@ function renderItems(container, tableName) {
   const visibleIndices = tableData.items.map((_, index) => index)
     .filter((index) => matchesItem(tableData.items[index], filter))
     .sort((left, right) => sort.column ? compareDynamoValues(tableData.items[left][sort.column], tableData.items[right][sort.column], tableData.types[left][sort.column], tableData.types[right][sort.column], sort.direction) || left - right : left - right);
+  const totalPages = Math.max(1, Math.ceil(visibleIndices.length / PAGE_SIZE));
+  currentPage = Math.min(currentPage, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pageIndices = visibleIndices.slice(pageStart, pageStart + PAGE_SIZE);
   selectedRows = new Set([...selectedRows].filter((index) => visibleIndices.includes(index)));
   area.innerHTML = `<div class="table-toolbar"><div><span class="eyebrow">TABLE</span><h2>${escapeHtml(tableName)}</h2><p>${tableData.count} item(s) · Key: ${escapeHtml(tableData.keys.join(' + '))}</p></div><div class="table-toolbar-actions"><button class="button secondary" id="refresh-items">↻ Refresh</button><button class="button primary" id="new-item">＋ New item</button></div></div>
     <div class="item-tools"><div class="item-filter"><span class="search-icon">⌕</span><input id="item-search" type="search" placeholder="Filter items…" value="${escapeHtml(filter.query)}" aria-label="Filter table items"><select id="filter-field" aria-label="Filter field"><option value="">All fields</option>${columns.map((column) => `<option value="${escapeHtml(column)}" ${filter.field === column ? 'selected' : ''}>${escapeHtml(column)}</option>`).join('')}</select>${filter.query ? '<button class="clear-filter" id="clear-filter">Clear</button>' : ''}</div><button class="button danger bulk-delete" id="bulk-delete" ${selectedRows.size ? '' : 'disabled'}>Delete selected <span>${selectedRows.size || ''}</span></button></div>
-    ${tableData.items.length ? `<div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all visible items" ${visibleIndices.length && visibleIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns.map((column) => { const isKey = tableData.keys.includes(column); const isPinned = pinnedFields.includes(column); return `<th><span class="column-head"><span class="column-name"><button class="copy-column" data-copy-column="${escapeHtml(column)}" title="Copy column name">${escapeHtml(column)}</button>${isKey ? '<span class="key-attribute" title="Key attribute" aria-label="Key attribute">★</span>' : `<button class="pin-field ${isPinned ? 'pinned' : ''}" data-pin-field="${escapeHtml(column)}" title="${isPinned ? 'Unpin field' : 'Pin field after key columns'}" aria-label="${isPinned ? 'Unpin' : 'Pin'} field ${escapeHtml(column)}">◆</button>`}</span><button class="sort-column ${sort.column === column ? 'active' : ''}" data-sort="${escapeHtml(column)}" aria-label="Sort by ${escapeHtml(column)}" aria-sort="${sort.column === column ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><span class="sort-indicator">${sort.column === column ? (sort.direction === 'asc' ? '▲' : '▼') : '⇅'}</span></button></span></th>`; }).join('')}<th class="actions actions-head">Actions</th></tr></thead><tbody>${visibleIndices.map((index) => { const item = tableData.items[index]; return `<tr><td class="select-cell"><input type="checkbox" data-select="${index}" aria-label="Select item ${index + 1}" ${selectedRows.has(index) ? 'checked' : ''}></td>${columns.map((column) => `<td class="attribute-cell copy-cell" data-copy-row="${index}" data-copy-field="${escapeHtml(column)}" title="Copy cell value">${renderAttribute(item[column], tableData.types[index][column] || 'NULL')}</td>`).join('')}<td class="actions"><button class="row-action view-edit-action" data-view="${index}" title="View or edit item" aria-label="View or edit item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.5 0 9.5 7 9.5 7s-4 7-9.5 7S2.5 12 2.5 12 6.5 5 12 5Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="row-action delete-action" data-delete="${index}" title="Delete item" aria-label="Delete item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></td></tr>`; }).join('')}</tbody></table></div>${visibleIndices.length ? '' : '<div class="filter-empty"><b>No matching items</b><span>Try another field or search term.</span></div>'}` : '<div class="empty"><b>Empty table</b><span>Add the first item to get started.</span></div>'}`;
+    ${tableData.items.length ? `<div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all items on this page" ${pageIndices.length && pageIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns.map((column) => { const isKey = tableData.keys.includes(column); const isPinned = pinnedFields.includes(column); return `<th><span class="column-head"><span class="column-name"><button class="copy-column" data-copy-column="${escapeHtml(column)}" title="Copy column name">${escapeHtml(column)}</button>${isKey ? '<span class="key-attribute" title="Key attribute" aria-label="Key attribute">★</span>' : `<button class="pin-field ${isPinned ? 'pinned' : ''}" data-pin-field="${escapeHtml(column)}" title="${isPinned ? 'Unpin field' : 'Pin field after key columns'}" aria-label="${isPinned ? 'Unpin' : 'Pin'} field ${escapeHtml(column)}">◆</button>`}</span><button class="sort-column ${sort.column === column ? 'active' : ''}" data-sort="${escapeHtml(column)}" aria-label="Sort by ${escapeHtml(column)}" aria-sort="${sort.column === column ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><span class="sort-indicator">${sort.column === column ? (sort.direction === 'asc' ? '▲' : '▼') : '⇅'}</span></button></span></th>`; }).join('')}<th class="actions actions-head">Actions</th></tr></thead><tbody>${pageIndices.map((index) => { const item = tableData.items[index]; return `<tr><td class="select-cell"><input type="checkbox" data-select="${index}" aria-label="Select item ${index + 1}" ${selectedRows.has(index) ? 'checked' : ''}></td>${columns.map((column) => `<td class="attribute-cell copy-cell" data-copy-row="${index}" data-copy-field="${escapeHtml(column)}" title="Copy cell value">${renderAttribute(item[column], tableData.types[index][column] || 'NULL')}</td>`).join('')}<td class="actions"><button class="row-action view-edit-action" data-view="${index}" title="View or edit item" aria-label="View or edit item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.5 0 9.5 7 9.5 7s-4 7-9.5 7S2.5 12 2.5 12 6.5 5 12 5Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="row-action delete-action" data-delete="${index}" title="Delete item" aria-label="Delete item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></td></tr>`; }).join('')}</tbody></table></div>${visibleIndices.length ? `<nav class="table-pagination" aria-label="Table pagination"><span>${pageStart + 1}–${Math.min(pageStart + PAGE_SIZE, visibleIndices.length)} of ${visibleIndices.length}</span><div><button class="button secondary" id="previous-page" ${currentPage === 1 ? 'disabled' : ''} aria-label="Previous page">‹ Previous</button><span>Page ${currentPage} of ${totalPages}</span><button class="button secondary" id="next-page" ${currentPage === totalPages ? 'disabled' : ''} aria-label="Next page">Next ›</button></div></nav>` : '<div class="filter-empty"><b>No matching items</b><span>Try another field or search term.</span></div>'}` : '<div class="empty"><b>Empty table</b><span>Add the first item to get started.</span></div>'}`;
 
   area.querySelector('#new-item').onclick = () => openEditor(container, tableName);
   area.querySelector('#refresh-items').onclick = () => loadItems(container, tableName);
-  area.querySelector('#item-search').oninput = (event) => { updateTableFilter(tableName, { query: event.target.value }); renderItems(container, tableName); container.querySelector('#item-search').focus(); };
-  area.querySelector('#filter-field').onchange = (event) => { updateTableFilter(tableName, { field: event.target.value }); renderItems(container, tableName); };
-  area.querySelector('#clear-filter')?.addEventListener('click', () => { updateTableFilter(tableName, { query: '', field: '' }); renderItems(container, tableName); });
+  area.querySelector('#item-search').oninput = (event) => { currentPage = 1; updateTableFilter(tableName, { query: event.target.value }); renderItems(container, tableName); container.querySelector('#item-search').focus(); };
+  area.querySelector('#filter-field').onchange = (event) => { currentPage = 1; updateTableFilter(tableName, { field: event.target.value }); renderItems(container, tableName); };
+  area.querySelector('#clear-filter')?.addEventListener('click', () => { currentPage = 1; updateTableFilter(tableName, { query: '', field: '' }); renderItems(container, tableName); });
   area.querySelector('#bulk-delete').onclick = () => deleteRows(container, tableName, [...selectedRows]);
   area.querySelectorAll('[data-sort]').forEach((button) => button.onclick = () => {
     const column = button.dataset.sort;
     state.itemSorts[tableName] = { column, direction: sort.column === column && sort.direction === 'asc' ? 'desc' : 'asc' };
+    currentPage = 1;
     saveState();
     renderItems(container, tableName);
   });
@@ -227,7 +234,9 @@ function renderItems(container, tableName) {
   });
   area.querySelectorAll('[data-copy-row]').forEach((cell) => cell.onclick = () => copyToClipboard(tableData.items[Number(cell.dataset.copyRow)][cell.dataset.copyField], 'Cell value'));
   const selectAll = area.querySelector('#select-all');
-  if (selectAll) selectAll.onchange = (event) => { visibleIndices.forEach((index) => event.target.checked ? selectedRows.add(index) : selectedRows.delete(index)); renderItems(container, tableName); };
+  if (selectAll) selectAll.onchange = (event) => { pageIndices.forEach((index) => event.target.checked ? selectedRows.add(index) : selectedRows.delete(index)); renderItems(container, tableName); };
+  area.querySelector('#previous-page')?.addEventListener('click', () => { currentPage -= 1; renderItems(container, tableName); });
+  area.querySelector('#next-page')?.addEventListener('click', () => { currentPage += 1; renderItems(container, tableName); });
   area.querySelectorAll('[data-select]').forEach((checkbox) => checkbox.onchange = () => { const index = Number(checkbox.dataset.select); checkbox.checked ? selectedRows.add(index) : selectedRows.delete(index); renderItems(container, tableName); });
   area.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => openEditor(container, tableName, tableData.items[button.dataset.view], tableData.schemas[button.dataset.view], 'view'));
   area.querySelectorAll('[data-delete]').forEach((button) => button.onclick = () => deleteRows(container, tableName, [Number(button.dataset.delete)]));
@@ -239,6 +248,7 @@ async function loadItems(container, tableName) {
   state.selectedTable = tableName;
   saveState();
   selectedRows.clear();
+  currentPage = 1;
   const area = container.querySelector('#table-content');
   showLoading(area, `Reading ${tableName}…`);
   try {
