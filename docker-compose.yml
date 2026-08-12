@@ -6,7 +6,6 @@ services:
     environment:
       LOCALSTACK_ENDPOINT: ${LOCALSTACK_ENDPOINT:-http://host.docker.internal:4566}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
-      SQS_MESSAGE_STORE_TABLE: ${SQS_MESSAGE_STORE_TABLE:-localstack-viewer-sqs-messages}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

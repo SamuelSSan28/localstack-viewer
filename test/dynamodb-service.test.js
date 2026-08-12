@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTable } from '../src/services/dynamodb-service.js';
+import { getTable, listTables } from '../src/services/dynamodb-service.js';
+
+test('hides the internal SQS message archive from the DynamoDB table list', async (context) => {
+  const originalFetch = global.fetch;
+  context.after(() => { global.fetch = originalFetch; });
+  global.fetch = async () => Response.json({
+    TableNames: ['customers', 'localstack-viewer-sqs-messages', 'orders'],
+  });
+
+  assert.deepEqual(await listTables(), ['customers', 'orders']);
+});
 
 test('reads every DynamoDB scan page and returns lossless type schemas', async (context) => {
   const originalFetch = global.fetch;

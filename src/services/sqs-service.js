@@ -34,7 +34,7 @@ async function receiveMessageBlocks(queueUrl) {
   }
 
   // Temporarily hide each batch so the next receive can move past it. Every
-  // receipt is restored below, and SQS also restores it after ten seconds if
+  // receipt is restored below, and SQS also restores it after 60 seconds if
   // the scan is interrupted. Receiving never deletes a message.
   const blocks = [];
   try {

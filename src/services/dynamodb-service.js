@@ -1,8 +1,9 @@
 import { marshall, unmarshall } from '../lib/dynamo-codec.js';
 import { dynamoRequest } from '../lib/localstack.js';
+import { messageStoreTable } from './sqs-message-store.js';
 
 export async function listTables() {
-  return (await dynamoRequest('ListTables')).TableNames || [];
+  return ((await dynamoRequest('ListTables')).TableNames || []).filter((tableName) => tableName !== messageStoreTable);
 }
 
 function attributeSchema(value) {

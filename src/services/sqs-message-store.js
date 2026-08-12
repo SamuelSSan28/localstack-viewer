@@ -1,7 +1,7 @@
 import { marshall, unmarshall } from '../lib/dynamo-codec.js';
 import { dynamoRequest } from '../lib/localstack.js';
 
-export const messageStoreTable = process.env.SQS_MESSAGE_STORE_TABLE || 'localstack-viewer-sqs-messages';
+export const messageStoreTable = 'localstack-viewer-sqs-messages';
 
 let tableReady;
 

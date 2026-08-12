@@ -16,7 +16,6 @@ test('documents configurable variables in an example file', async () => {
 
   assert.match(environment, /^LOCALSTACK_ENDPOINT=/m);
   assert.match(environment, /^AWS_DEFAULT_REGION=/m);
-  assert.match(environment, /^SQS_MESSAGE_STORE_TABLE=/m);
   assert.match(environment, /^VIEWER_PORT=/m);
 });
 
