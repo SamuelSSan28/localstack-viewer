@@ -5,24 +5,47 @@ async function sqs(action, parameters = {}) {
   return (await localstackRequest(`/?${query}`)).text();
 }
 
+const messageAttribute = (block, name) => {
+  for (const attribute of xmlValues(block, 'Attribute')) {
+    if (xmlValues(attribute, 'Name')[0] === name) return xmlValues(attribute, 'Value')[0] || null;
+  }
+  return null;
+};
+
 export async function listQueues() {
   const xml = await sqs('ListQueues');
   return xmlValues(xml, 'QueueUrl').map((url) => ({ name: url.split('/').pop(), url }));
 }
 
 export async function receiveMessages(queueUrl) {
-  // SQS returns at most ten messages per request. Multiple non-destructive reads
-  // give LocalStack a chance to return every visible message instead of silently
-  // limiting the viewer to the first batch.
-  const responses = await Promise.all(Array.from({ length: 10 }, () => sqs('ReceiveMessage', {
-    QueueUrl: queueUrl,
-    MaxNumberOfMessages: '10',
-    VisibilityTimeout: '0',
-    WaitTimeSeconds: '0',
-    AttributeName: 'All',
-    MessageAttributeName: 'All',
-  })));
-  const blocks = responses.flatMap((xml) => xmlValues(xml, 'Message'));
+  // Temporarily hide each batch so the next receive can move past it. Every
+  // receipt is restored below, and SQS also restores it after ten seconds if
+  // the scan is interrupted. Receiving never deletes a message.
+  const blocks = [];
+  try {
+    for (let batch = 0; batch < 10; batch += 1) {
+      const xml = await sqs('ReceiveMessage', {
+        QueueUrl: queueUrl,
+        MaxNumberOfMessages: '10',
+        VisibilityTimeout: '10',
+        WaitTimeSeconds: '0',
+        'AttributeName.1': 'All',
+        'MessageAttributeName.1': 'All',
+      });
+      const received = xmlValues(xml, 'Message');
+      blocks.push(...received);
+    }
+  } finally {
+    for (let offset = 0; offset < blocks.length; offset += 10) {
+      const parameters = { QueueUrl: queueUrl };
+      blocks.slice(offset, offset + 10).forEach((block, index) => {
+        parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.Id`] = String(index);
+        parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.ReceiptHandle`] = xmlValues(block, 'ReceiptHandle')[0];
+        parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.VisibilityTimeout`] = '0';
+      });
+      await sqs('ChangeMessageVisibilityBatch', parameters);
+    }
+  }
   const uniqueBlocks = [...new Map(blocks.map((block) => [xmlValues(block, 'MessageId')[0], block])).values()];
   return uniqueBlocks.map((block) => {
     const body = xmlValues(block, 'Body')[0] || '';
@@ -32,7 +55,7 @@ export async function receiveMessages(queueUrl) {
       id: xmlValues(block, 'MessageId')[0],
       md5: xmlValues(block, 'MD5OfBody')[0],
       receiptHandle: xmlValues(block, 'ReceiptHandle')[0],
-      sentTimestamp: xmlValues(block, 'SentTimestamp')[0] || null,
+      sentTimestamp: messageAttribute(block, 'SentTimestamp'),
       body,
       json,
     };
