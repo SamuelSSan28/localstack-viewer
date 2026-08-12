@@ -10,7 +10,19 @@ export async function listBuckets() {
   const xml = await (await localstackRequest('/')).text();
   const names = xmlValues(xml, 'Name');
   const created = xmlValues(xml, 'CreationDate');
-  return names.map((name, index) => ({ name, createdAt: created[index] || '' }));
+  return Promise.all(names.map(async (name, index) => {
+    try {
+      const locationXml = await (await localstackRequest(`${bucketPath(name)}?location`)).text();
+      const location = xmlValues(locationXml, 'LocationConstraint')[0] || 'us-east-1';
+      // AWS can still return the legacy "EU" value for eu-west-1 buckets.
+      const region = location === 'EU' ? 'eu-west-1' : location;
+      return { name, createdAt: created[index] || '', region };
+    } catch {
+      // One inaccessible bucket should not prevent the remaining buckets from
+      // being listed and filtered.
+      return { name, createdAt: created[index] || '', region: 'unknown' };
+    }
+  }));
 }
 
 export async function createBucket(name) {
