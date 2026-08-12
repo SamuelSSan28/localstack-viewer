@@ -9,15 +9,9 @@ A browser dashboard for inspecting resources in an existing LocalStack instance,
 
 LocalStack Viewer does not start or configure LocalStack.
 
-## Run the image
+## Run with Docker
 
-The repository owner is **`SamuelSSan28`** and the published image is:
-
-```text
-ghcr.io/samuelssan28/localstack-viewer:latest
-```
-
-Pull and start the viewer:
+Pull the published image and start the viewer:
 
 ```bash
 docker pull ghcr.io/samuelssan28/localstack-viewer:latest
@@ -88,24 +82,7 @@ Removing the container does not remove LocalStack resources. The viewer only rea
 
 For example, expose the viewer at port `9090` with `-p 9090:8888`.
 
-## Private package access
+## Contributing
 
-Public images can be pulled without signing in. If the package is private, authenticate with a token that has `read:packages` permission:
-
-```bash
-echo "$GHCR_TOKEN" | docker login ghcr.io -u SamuelSSan28 --password-stdin
-docker pull ghcr.io/samuelssan28/localstack-viewer:latest
-```
-
-## Useful commands
-
-```bash
-# View logs
-docker logs -f localstack-viewer
-
-# Restart the viewer
-docker restart localstack-viewer
-
-# Stop and remove the viewer
-docker rm -f localstack-viewer
-```
+Contributions are welcome. If you would like to suggest an improvement or fix,
+open a pull request with your changes.
