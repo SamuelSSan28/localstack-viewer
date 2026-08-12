@@ -2,6 +2,7 @@ import { api } from '../api.js';
 import { escapeHtml, setStatus, showError, showLoading } from '../ui.js';
 
 let activeQueue;
+export const MESSAGE_PAGE_SIZE = 10;
 
 export const eventTypeOf = (message) => {
   if (!message.json || Array.isArray(message.json)) return message.json ? 'JSON event' : 'Text message';
@@ -82,6 +83,7 @@ async function loadMessages(container, queue) {
     const filter = content.querySelector('#event-filter');
     const emailFilter = content.querySelector('#email-filter');
     const sort = content.querySelector('#message-sort');
+    let currentPage = 1;
     const renderMessages = () => {
       const query = search.value.trim().toLocaleLowerCase();
       const visible = messages.map((message, originalIndex) => ({ message, originalIndex }))
@@ -91,16 +93,29 @@ async function loadMessages(container, queue) {
         .sort((a, b) => sort.value === 'type'
           ? eventTypeOf(a.message).localeCompare(eventTypeOf(b.message))
           : (timestampOf(a.message) - timestampOf(b.message)) * (sort.value === 'oldest' ? 1 : -1));
+      const totalPages = Math.max(1, Math.ceil(visible.length / MESSAGE_PAGE_SIZE));
+      currentPage = Math.min(currentPage, totalPages);
+      const pageStart = (currentPage - 1) * MESSAGE_PAGE_SIZE;
+      const pageMessages = visible.slice(pageStart, pageStart + MESSAGE_PAGE_SIZE);
       content.querySelector('#message-results').textContent = `${visible.length} of ${messages.length}`;
-      grid.innerHTML = visible.length ? visible.map(({ message, originalIndex }) => messageCard(message, originalIndex)).join('')
+      grid.innerHTML = visible.length ? `${pageMessages.map(({ message, originalIndex }) => messageCard(message, originalIndex)).join('')}
+        <nav class="table-pagination message-pagination" aria-label="Message pagination">
+          <span>${pageStart + 1}–${Math.min(pageStart + MESSAGE_PAGE_SIZE, visible.length)} of ${visible.length}</span>
+          <div><button class="button secondary" id="previous-message-page" ${currentPage === 1 ? 'disabled' : ''} aria-label="Previous message page">‹ Previous</button><span>Page ${currentPage} of ${totalPages}</span><button class="button secondary" id="next-message-page" ${currentPage === totalPages ? 'disabled' : ''} aria-label="Next message page">Next ›</button></div>
+        </nav>`
         : `<div class="empty"><b>${messages.length ? 'No messages match' : 'No visible messages'}</b><span>${messages.length ? 'Try changing the search or event type filter.' : 'Send a message or refresh this page.'}</span></div>`;
+      grid.querySelector('#previous-message-page')?.addEventListener('click', () => { currentPage -= 1; renderMessages(); });
+      grid.querySelector('#next-message-page')?.addEventListener('click', () => { currentPage += 1; renderMessages(); });
       grid.querySelectorAll('[data-remove]').forEach((button) => button.onclick = async () => {
         if (!confirm('Permanently delete this message?')) return;
         const message = messages[button.dataset.remove];
         try { await api.deleteMessage(queue.url, message.id, message.archived ? null : message.receiptHandle); setStatus('Message deleted'); await loadMessages(container, queue); } catch (error) { setStatus(error.message, 'error'); }
       });
     };
-    [search, filter, emailFilter, sort].forEach((control) => control.addEventListener(control === search ? 'input' : 'change', renderMessages));
+    [search, filter, emailFilter, sort].forEach((control) => control.addEventListener(control === search ? 'input' : 'change', () => {
+      currentPage = 1;
+      renderMessages();
+    }));
     renderMessages();
     content.querySelector('#refresh-messages').onclick = () => loadMessages(container, activeQueue);
   } catch (error) { showError(content, error); }

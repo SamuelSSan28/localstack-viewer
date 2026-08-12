@@ -93,6 +93,51 @@ export async function receiveMessages(queueUrl) {
 }
 
 export async function deleteMessage(queueUrl, messageId, receiptHandle) {
-  if (receiptHandle) await sqs('DeleteMessage', { QueueUrl: queueUrl, ReceiptHandle: receiptHandle });
+  if (receiptHandle) {
+    try {
+      await sqs('DeleteMessage', { QueueUrl: queueUrl, ReceiptHandle: receiptHandle });
+    } catch (error) {
+      // The LocalStack developer endpoint used to peek at messages can return
+      // receipt handles that the public SQS API does not accept. Obtain a fresh
+      // handle without losing or leaving unrelated messages invisible.
+      if (!String(error.message).includes('ReceiptHandleIsInvalid')) throw error;
+      await deleteMessageById(queueUrl, messageId);
+    }
+  }
   await deleteStoredMessage(queueUrl, messageId);
+}
+
+async function deleteMessageById(queueUrl, messageId) {
+  const received = [];
+  let target;
+  try {
+    for (let batch = 0; batch < 10 && !target; batch += 1) {
+      const xml = await sqs('ReceiveMessage', {
+        QueueUrl: queueUrl,
+        MaxNumberOfMessages: '10',
+        VisibilityTimeout: '60',
+        WaitTimeSeconds: '0',
+      });
+      const messages = xmlValues(xml, 'Message');
+      if (!messages.length) break;
+      received.push(...messages);
+      target = messages.find((block) => xmlValues(block, 'MessageId')[0] === messageId);
+    }
+    if (!target) throw new Error(`SQS message ${messageId} is no longer available for deletion`);
+    await sqs('DeleteMessage', {
+      QueueUrl: queueUrl,
+      ReceiptHandle: xmlValues(target, 'ReceiptHandle')[0],
+    });
+  } finally {
+    const untouched = received.filter((block) => block !== target);
+    for (let offset = 0; offset < untouched.length; offset += 10) {
+      const parameters = { QueueUrl: queueUrl };
+      untouched.slice(offset, offset + 10).forEach((block, index) => {
+        parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.Id`] = String(index);
+        parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.ReceiptHandle`] = xmlValues(block, 'ReceiptHandle')[0];
+        parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.VisibilityTimeout`] = '0';
+      });
+      await sqs('ChangeMessageVisibilityBatch', parameters);
+    }
+  }
 }
