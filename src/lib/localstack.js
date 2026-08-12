@@ -26,7 +26,7 @@ export async function dynamoRequest(action, payload = {}) {
   })).json();
 }
 
-export const xmlValues = (xml, tag) => [...xml.matchAll(new RegExp(`<${tag}>(.*?)</${tag}>`, 'gs'))]
+export const xmlValues = (xml, tag) => [...xml.matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>(.*?)</${tag}>`, 'gs'))]
   .map((match) => match[1]
     .replaceAll('&quot;', '"')
     .replaceAll('&apos;', "'")

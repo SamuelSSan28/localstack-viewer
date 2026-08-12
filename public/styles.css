@@ -270,6 +270,12 @@ textarea, .publish-panel input, .publish-panel textarea { color: #dce2ed; backgr
 /* S3 browser */
 #s3-content { min-width: 0; padding: 25px; }
 .s3-actions { display: flex; gap: 8px; }
+.s3-bucket-filters { display: grid; gap: 8px; margin: 0 4px 12px; }
+.s3-bucket-filters input, .s3-bucket-filters select { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid #303b50; border-radius: 7px; color: #dce2ed; background: #121a2b; font-size: 11px; outline: none; }
+.s3-bucket-filters input:focus, .s3-bucket-filters select:focus { border-color: #7961dc; box-shadow: 0 0 0 3px #684bd926; }
+.s3-bucket-filters small { padding: 0 3px; color: #7f8ba0; font-size: 9px; }
+.s3-region { display: inline-block; margin-right: 6px; padding: 2px 5px; border-radius: 4px; color: #b8a9fa; background: #292149; font-size: 8px; }
+.s3-bucket-list .list-empty { display: grid; gap: 5px; }
 .s3-tools { grid-template-columns: minmax(220px, 1fr) auto; }
 .s3-object-icon { margin-right: 9px; color: #9b87f5; font-size: 16px; }
 .s3-detail-body { display: grid; gap: 12px; margin-top: 18px; }

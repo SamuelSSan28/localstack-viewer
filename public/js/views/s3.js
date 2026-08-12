@@ -71,14 +71,43 @@ export async function renderS3(container) {
   showLoading(container, 'Listing S3 buckets…');
   try {
     const { buckets } = await api.buckets();
+    const regions = [...new Set(buckets.map((bucket) => bucket.region || 'unknown'))].sort();
     container.innerHTML = `<div class="page-head"><div><span class="eyebrow">STORAGE</span><h1>S3 buckets</h1><p>Browse files, inspect metadata and upload development assets.</p></div><button class="button" id="new-bucket">New bucket</button></div>
-      <section class="resource-layout"><aside class="resource-list"><label>BUCKETS</label>${buckets.map((bucket, index) => `<button class="resource-option ${index === 0 ? 'active' : ''}" data-bucket="${escapeHtml(bucket.name)}"><span>▱</span><span><b>${escapeHtml(bucket.name)}</b><small>${escapeHtml(bucket.createdAt ? new Date(bucket.createdAt).toLocaleDateString() : 'S3 bucket')}</small></span></button>`).join('') || '<div class="empty"><b>No buckets found</b><span>Create one to upload files.</span></div>'}</aside><div id="s3-content"><div class="empty"><b>Select a bucket</b></div></div></section>
+      <section class="resource-layout"><aside class="resource-list s3-bucket-list"><label>BUCKETS</label><div class="s3-bucket-filters"><input id="bucket-search" type="search" aria-label="Search buckets" placeholder="Search buckets…"><select id="bucket-region" aria-label="Filter buckets by region"><option value="">All regions</option>${regions.map((region) => `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`).join('')}</select><small id="bucket-results"></small></div><div id="bucket-options"></div></aside><div id="s3-content"><div class="empty"><b>Select a bucket</b></div></div></section>
       <dialog id="upload-dialog"><form method="dialog" id="upload-form"><div class="dialog-head"><div><span class="eyebrow">S3 UPLOAD</span><h2>Upload files</h2></div><button class="icon-button dialog-x" value="cancel">×</button></div><label>Files</label><input id="upload-files" type="file" multiple required><label>Key prefix <span class="hint">optional</span></label><input id="upload-prefix" placeholder="images/2026"><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" id="submit-upload" value="default">Upload</button></div></form></dialog>
       <dialog id="s3-details"><div class="dialog-head"><div><span class="eyebrow">OBJECT</span><h2>Object details</h2></div><button class="icon-button dialog-x" onclick="this.closest('dialog').close()">×</button></div><label>Content type</label><input id="detail-content-type"><div class="s3-detail-body"></div><div class="dialog-actions"><a class="button secondary" id="download-object">Download</a><button class="button" id="save-object">Save metadata</button></div></dialog>`;
-    container.querySelectorAll('[data-bucket]').forEach((button) => button.onclick = () => { container.querySelectorAll('[data-bucket]').forEach((item) => item.classList.toggle('active', item === button)); loadObjects(container, button.dataset.bucket); });
+    const bucketOptions = container.querySelector('#bucket-options');
+    const bucketSearch = container.querySelector('#bucket-search');
+    const bucketRegion = container.querySelector('#bucket-region');
+    let activeContentBucket = '';
+    const selectBucket = (button) => {
+      container.querySelectorAll('[data-bucket]').forEach((item) => item.classList.toggle('active', item === button));
+      activeContentBucket = button.dataset.bucket;
+      loadObjects(container, button.dataset.bucket);
+    };
+    const renderBuckets = () => {
+      const query = bucketSearch.value.trim().toLowerCase();
+      const region = bucketRegion.value;
+      const visible = buckets.filter((bucket) => bucket.name.toLowerCase().includes(query) && (!region || bucket.region === region));
+      container.querySelector('#bucket-results').textContent = `${visible.length} of ${buckets.length} bucket(s)`;
+      bucketOptions.innerHTML = visible.map((bucket) => `<button class="resource-option ${bucket.name === selectedBucket ? 'active' : ''}" data-bucket="${escapeHtml(bucket.name)}"><span>▱</span><span><b>${escapeHtml(bucket.name)}</b><small><span class="s3-region">${escapeHtml(bucket.region || 'unknown')}</span>${escapeHtml(bucket.createdAt ? new Date(bucket.createdAt).toLocaleDateString() : 'Creation date unavailable')}</small></span></button>`).join('') || `<div class="list-empty"><b>No buckets found</b><span>${buckets.length ? 'Try another name or region.' : 'Create one to upload files.'}</span></div>`;
+      bucketOptions.querySelectorAll('[data-bucket]').forEach((button) => { button.onclick = () => selectBucket(button); });
+      if (visible.length) {
+        const target = visible.some((bucket) => bucket.name === selectedBucket)
+          ? bucketOptions.querySelector(`[data-bucket="${CSS.escape(selectedBucket)}"]`)
+          : bucketOptions.querySelector('[data-bucket]');
+        if (target.dataset.bucket !== activeContentBucket) selectBucket(target);
+      } else {
+        activeContentBucket = '';
+        container.querySelector('#s3-content').innerHTML = '<div class="empty"><b>No bucket selected</b><span>Change the filters to browse a bucket.</span></div>';
+      }
+    };
+    bucketSearch.oninput = renderBuckets;
+    bucketRegion.onchange = renderBuckets;
     container.querySelector('#new-bucket').onclick = async () => { const name = prompt('New bucket name'); if (!name) return; try { await api.createBucket(name.trim()); setStatus('Bucket created'); await renderS3(container); } catch (error) { setStatus(error.message, 'error'); } };
     container.querySelector('#upload-form').onsubmit = async (event) => { event.preventDefault(); const files = [...container.querySelector('#upload-files').files]; if (!files.length) return; const prefix = container.querySelector('#upload-prefix').value.trim().replace(/^\/+|\/+$/g, ''); try { for (const file of files) await api.uploadObject(selectedBucket, { key: `${prefix ? `${prefix}/` : ''}${file.name}`, contentType: file.type, content: await fileContent(file) }); setStatus(`${files.length} file(s) uploaded`); container.querySelector('#upload-dialog').close(); await loadObjects(container, selectedBucket); } catch (error) { setStatus(error.message, 'error'); } };
-    if (buckets[0]) loadObjects(container, buckets[0].name);
+    selectedBucket = buckets.some((bucket) => bucket.name === selectedBucket) ? selectedBucket : '';
+    renderBuckets();
   } catch (error) { showError(container, error); }
 }
 
