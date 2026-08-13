@@ -27,3 +27,9 @@ test('workflow publishes a multi-platform Docker image', async () => {
   assert.match(workflow, /docker\/setup-qemu-action@v3/);
   assert.match(workflow, /^\s+platforms: linux\/amd64,linux\/arm64$/m);
 });
+
+test('published image starts the viewer entry point with an absolute path', async () => {
+  const dockerfile = await readFile(new URL('../Dockerfile', import.meta.url), 'utf8');
+
+  assert.match(dockerfile, /^CMD \["node", "\/app\/src\/server\.js"\]$/m);
+});
