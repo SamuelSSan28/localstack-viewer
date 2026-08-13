@@ -30,8 +30,13 @@ test('creates buckets with the configured regional constraint', async (context) 
   });
   assert.equal(requests[0].url, 'http://localhost:4566/arquivos');
   assert.equal(requests[0].options.method, 'PUT');
-  assert.equal(requests[0].options.headers['Content-Type'], 'application/xml');
-  assert.match(requests[0].options.body, /<LocationConstraint>sa-east-1<\/LocationConstraint>/);
+  assert.equal(requests[0].options.headers['content-type'], 'application/xml');
+  assert.match(requests[0].options.headers.authorization, /^AWS4-HMAC-SHA256 /);
+  assert.ok(requests[0].options.headers['x-amz-content-sha256']);
+  assert.match(
+    requests[0].options.body.toString(),
+    /<LocationConstraint>sa-east-1<\/LocationConstraint>/,
+  );
 });
 
 test('creates us-east-1 buckets without a location constraint', async (context) => {
@@ -51,7 +56,7 @@ test('creates us-east-1 buckets without a location constraint', async (context) 
   await createBucket('assets', 'us-east-1');
   assert.equal(request.options.method, 'PUT');
   assert.equal(request.options.body, undefined);
-  assert.equal(request.options.headers, undefined);
+  assert.match(request.options.headers.authorization, /\/us-east-1\/s3\/aws4_request/);
 });
 
 test('lists S3 buckets and object metadata from XML responses', async (context) => {
