@@ -92,17 +92,26 @@ const messageCard = (message, originalIndex) => `<article class="message-card">
   <details><summary>Technical metadata</summary><dl><dt>Message ID</dt><dd>${escapeHtml(message.id)}</dd><dt>MD5</dt><dd>${escapeHtml(message.md5)}</dd><dt>Sent</dt><dd>${escapeHtml(formattedTime(message))}</dd></dl></details>
 </article>`;
 
-async function loadMessages(container, queue) {
+async function loadMessages(container, queue, { background = false, notify = false } = {}) {
   activeQueue = queue;
   const content = container.querySelector('#queue-content');
-  showLoading(content, `Reading messages from ${queue.name}…`);
+  const refreshButton = background ? content.querySelector('#refresh-messages') : null;
+  if (refreshButton) {
+    refreshButton.disabled = true;
+    refreshButton.setAttribute('aria-busy', 'true');
+    refreshButton.innerHTML = '<span class="button-spinner" aria-hidden="true"></span> Refreshing…';
+  } else if (!background) {
+    showLoading(content, `Reading messages from ${queue.name}…`);
+  }
   try {
     const { messages } = await api.messages(queue.url);
     const eventTypes = [...new Set(messages.map(eventTypeOf))].sort((a, b) => a.localeCompare(b));
     const userEmails = [...new Set(messages.map(userEmailOf).filter(Boolean))].sort((a, b) =>
       a.localeCompare(b),
     );
+    const fifo = queue.url.endsWith('.fifo');
     content.innerHTML = `<div class="table-toolbar"><div><span class="eyebrow">SQS QUEUE</span><h2>${escapeHtml(queue.name)}</h2><p>${messages.length} visible message(s), without changing visibility.</p></div><button class="button secondary" id="refresh-messages">↻ Refresh</button></div>
+      <form class="publish-panel sqs-send-panel" id="sqs-send-form"><h3>Send message</h3><label>JSON or text payload<textarea id="sqs-message" spellcheck="false" placeholder='{"event":"created","id":123}' required></textarea></label>${fifo ? '<label>Message group ID<input id="sqs-message-group" required placeholder="default"></label><label>Deduplication ID <span>optional with content-based deduplication</span><input id="sqs-deduplication-id"></label>' : ''}<div class="json-hint" id="sqs-json-hint">Enter JSON or plain text.</div><button class="button primary">Send to queue</button></form>
       <div class="message-tools" aria-label="Message filters">
         <label><span>Search messages</span><input id="message-search" type="search" placeholder="Event type, ID or payload…"></label>
         <label><span>Event type</span><span class="select-control"><select id="event-filter"><option value="">All event types</option>${eventTypes.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join('')}</select></span></label>
@@ -116,6 +125,35 @@ async function loadMessages(container, queue) {
     const filter = content.querySelector('#event-filter');
     const emailFilter = content.querySelector('#email-filter');
     const sort = content.querySelector('#message-sort');
+    const newMessage = content.querySelector('#sqs-message');
+    newMessage.oninput = () => {
+      try {
+        JSON.parse(newMessage.value);
+        content.querySelector('#sqs-json-hint').textContent = '✓ Valid JSON';
+        content.querySelector('#sqs-json-hint').className = 'json-hint valid';
+      } catch {
+        content.querySelector('#sqs-json-hint').textContent = 'Plain text';
+        content.querySelector('#sqs-json-hint').className = 'json-hint';
+      }
+    };
+    content.querySelector('#sqs-send-form').onsubmit = async (event) => {
+      event.preventDefault();
+      const button = event.submitter;
+      button.disabled = true;
+      try {
+        const result = await api.sendMessage(queue.url, newMessage.value, {
+          ...(fifo ? { messageGroupId: content.querySelector('#sqs-message-group').value } : {}),
+          ...(fifo && content.querySelector('#sqs-deduplication-id').value
+            ? { deduplicationId: content.querySelector('#sqs-deduplication-id').value }
+            : {}),
+        });
+        setStatus(`Message sent: ${result.messageId}`);
+        await loadMessages(container, queue, { background: true });
+      } catch (error) {
+        setStatus(error.message, 'error');
+        button.disabled = false;
+      }
+    };
     let currentPage = 1;
     const renderMessages = () => {
       const query = search.value.trim().toLocaleLowerCase();
@@ -169,7 +207,7 @@ async function loadMessages(container, queue) {
                 message.archived ? null : message.receiptHandle,
               );
               setStatus('Message deleted');
-              await loadMessages(container, queue);
+              await loadMessages(container, queue, { background: true });
             } catch (error) {
               setStatus(error.message, 'error');
             }
@@ -183,9 +221,20 @@ async function loadMessages(container, queue) {
       }),
     );
     renderMessages();
-    content.querySelector('#refresh-messages').onclick = () => loadMessages(container, activeQueue);
+    content.querySelector('#refresh-messages').onclick = () =>
+      loadMessages(container, activeQueue, { background: true, notify: true });
+    if (notify) setStatus('Messages updated');
   } catch (error) {
-    showError(content, error);
+    if (background) {
+      if (refreshButton?.isConnected) {
+        refreshButton.disabled = false;
+        refreshButton.removeAttribute('aria-busy');
+        refreshButton.textContent = '↻ Refresh';
+      }
+      setStatus(error.message, 'error');
+    } else {
+      showError(content, error);
+    }
   }
 }
 

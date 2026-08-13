@@ -2,7 +2,55 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { eventTypeOf, MESSAGE_PAGE_SIZE, userEmailOf } from '../public/js/views/sqs.js';
-import { deleteMessage, receiveMessages } from '../src/services/sqs-service.js';
+import { deleteMessage, receiveMessages, sendMessage } from '../src/services/sqs-service.js';
+
+test('sends a message to an SQS queue', async (context) => {
+  const originalFetch = global.fetch;
+  context.after(() => {
+    global.fetch = originalFetch;
+  });
+  let request;
+  global.fetch = async (url) => {
+    request = new URL(url);
+    return new Response(`<SendMessageResponse><SendMessageResult>
+      <MD5OfMessageBody>checksum</MD5OfMessageBody><MessageId>message-123</MessageId>
+    </SendMessageResult></SendMessageResponse>`);
+  };
+
+  const result = await sendMessage(
+    'http://localhost:4566/000000000000/events.fifo',
+    '{"event":"created"}',
+    { messageGroupId: 'events', deduplicationId: 'event-123' },
+  );
+
+  assert.equal(request.searchParams.get('Action'), 'SendMessage');
+  assert.equal(request.searchParams.get('QueueUrl'), 'http://localhost:4566/000000000000/events.fifo');
+  assert.equal(request.searchParams.get('MessageBody'), '{"event":"created"}');
+  assert.equal(request.searchParams.get('MessageGroupId'), 'events');
+  assert.equal(request.searchParams.get('MessageDeduplicationId'), 'event-123');
+  assert.deepEqual(result, { messageId: 'message-123', md5: 'checksum' });
+});
+
+test('exposes the SQS send-message form and client API', async () => {
+  const [view, api, routes] = await Promise.all([
+    readFile(new URL('../public/js/views/sqs.js', import.meta.url), 'utf8'),
+    readFile(new URL('../public/js/api.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/routes/sqs-routes.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(view, /id="sqs-send-form"/);
+  assert.match(view, /messageGroupId/);
+  assert.match(api, /sendMessage:/);
+  assert.match(routes, /POST: addMessage/);
+});
+
+test('refreshes SQS messages in the background and reports completion', async () => {
+  const view = await readFile(new URL('../public/js/views/sqs.js', import.meta.url), 'utf8');
+  assert.match(view, /\{ background = false, notify = false \}/);
+  assert.match(view, /refreshButton\.setAttribute\('aria-busy', 'true'\)/);
+  assert.match(view, /class="button-spinner"/);
+  assert.match(view, /\{ background: true, notify: true \}/);
+  assert.match(view, /setStatus\('Messages updated'\)/);
+});
 
 test('paginates filtered SQS messages ten at a time', async () => {
   const view = await readFile(new URL('../public/js/views/sqs.js', import.meta.url), 'utf8');
