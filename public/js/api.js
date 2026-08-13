@@ -38,8 +38,8 @@ export const api = {
       body: JSON.stringify({ message, subject }),
     }),
   buckets: () => request('/api/s3/buckets'),
-  createBucket: (name) =>
-    request('/api/s3/buckets', { method: 'POST', body: JSON.stringify({ name }) }),
+  createBucket: (name, region) =>
+    request('/api/s3/buckets', { method: 'POST', body: JSON.stringify({ name, region }) }),
   deleteBucket: (name) =>
     request('/api/s3/buckets', { method: 'DELETE', body: JSON.stringify({ name }) }),
   objects: (bucket, prefix = '') =>

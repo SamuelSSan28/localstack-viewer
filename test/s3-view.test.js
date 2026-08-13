@@ -9,4 +9,6 @@ test('offers bucket name and region filters and displays each bucket region', as
   assert.match(view, /id="bucket-region"/);
   assert.match(view, /bucket\.region === region/);
   assert.match(view, /class="s3-region"/);
+  assert.match(view, /id="new-bucket-region"/);
+  assert.match(view, /api\.createBucket\(name, region\)/);
 });

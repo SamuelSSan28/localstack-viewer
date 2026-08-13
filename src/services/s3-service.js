@@ -28,19 +28,19 @@ export async function listBuckets() {
   );
 }
 
-export async function createBucket(name) {
+export async function createBucket(name, region = localstack.region) {
   // S3 requires a LocationConstraint when the bucket is created outside
   // us-east-1. Without it, LocalStack can acknowledge the raw PUT while the
   // bucket is not created in the region configured for the viewer.
-  const regional = localstack.region !== 'us-east-1';
+  const regional = region !== 'us-east-1';
   const body = regional
-    ? `<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><LocationConstraint>${localstack.region}</LocationConstraint></CreateBucketConfiguration>`
+    ? `<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><LocationConstraint>${region}</LocationConstraint></CreateBucketConfiguration>`
     : undefined;
   await localstackRequest(bucketPath(name), {
     method: 'PUT',
     ...(regional ? { headers: { 'Content-Type': 'application/xml' }, body } : {}),
   });
-  return { name };
+  return { name, region };
 }
 
 export async function deleteBucket(name) {

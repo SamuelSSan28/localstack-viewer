@@ -24,7 +24,10 @@ test('creates buckets with the configured regional constraint', async (context) 
   };
 
   localstack.region = 'sa-east-1';
-  assert.deepEqual(await createBucket('arquivos'), { name: 'arquivos' });
+  assert.deepEqual(await createBucket('arquivos', 'sa-east-1'), {
+    name: 'arquivos',
+    region: 'sa-east-1',
+  });
   assert.equal(requests[0].url, 'http://localhost:4566/arquivos');
   assert.equal(requests[0].options.method, 'PUT');
   assert.equal(requests[0].options.headers['Content-Type'], 'application/xml');
@@ -44,8 +47,8 @@ test('creates us-east-1 buckets without a location constraint', async (context) 
     return new Response('');
   };
 
-  localstack.region = 'us-east-1';
-  await createBucket('assets');
+  localstack.region = 'sa-east-1';
+  await createBucket('assets', 'us-east-1');
   assert.equal(request.options.method, 'PUT');
   assert.equal(request.options.body, undefined);
   assert.equal(request.options.headers, undefined);
