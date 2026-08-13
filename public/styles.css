@@ -581,8 +581,8 @@ td code {
 .actions {
   position: sticky;
   right: 0;
-  width: 78px;
-  min-width: 78px;
+  width: 104px;
+  min-width: 104px;
   white-space: nowrap;
   background: #fff;
   box-shadow: -8px 0 14px #17233c0a;
@@ -593,18 +593,18 @@ td code {
 }
 .actions .row-action {
   display: inline-grid;
-  width: 28px;
-  height: 28px;
-  padding: 5px;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
   place-items: center;
-  border: 0;
-  border-radius: 5px;
-  color: #758096;
-  background: none;
+  border: 1px solid #d8d1f5;
+  border-radius: 8px;
+  color: #6045c7;
+  background: #f3f0ff;
 }
 .actions .row-action svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -612,12 +612,19 @@ td code {
   stroke-linejoin: round;
 }
 .actions .row-action:hover {
-  color: #684bd9;
-  background: #f0edfd;
+  border-color: #9d8be4;
+  color: #4d32b5;
+  background: #e9e3ff;
+}
+.actions .delete-action {
+  border-color: #f0caca;
+  color: #b44343;
+  background: #fff2f2;
 }
 .actions .delete-action:hover {
-  color: #c45a5a;
-  background: #fff0f0;
+  border-color: #df8f8f;
+  color: #982f2f;
+  background: #ffe3e3;
 }
 .icon-button {
   border: 0;
@@ -1458,13 +1465,25 @@ td code,
 .icon-button {
   color: #9aa6ba;
 }
+.actions .row-action {
+  border-color: #51487a;
+  color: #c2b6ff;
+  background: #292347;
+}
 .actions .row-action:hover {
-  color: #b5a6fb;
-  background: #282148;
+  border-color: #7869bd;
+  color: #ded7ff;
+  background: #393061;
+}
+.actions .delete-action {
+  border-color: #704047;
+  color: #ffaaaa;
+  background: #3b252d;
 }
 .actions .delete-action:hover {
-  color: #f09898;
-  background: #402329;
+  border-color: #a95b64;
+  color: #ffc5c5;
+  background: #542d35;
 }
 .list-empty,
 .filter-empty,
