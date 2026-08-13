@@ -12,18 +12,32 @@ async function loadTopic(container, topic) {
       <form class="publish-panel" id="publish-form"><h3>Publish test message</h3><label>Subject <span>optional</span><input id="sns-subject" maxlength="100"></label><label>JSON or text payload<textarea id="sns-message" spellcheck="false" placeholder='{"event":"created","id":123}' required></textarea></label><div class="json-hint" id="json-hint">Enter JSON or plain text.</div><button class="button primary">Publish to topic</button></form></section>`;
     const message = content.querySelector('#sns-message');
     message.oninput = () => {
-      try { JSON.parse(message.value); content.querySelector('#json-hint').textContent = '✓ Valid JSON'; content.querySelector('#json-hint').className = 'json-hint valid'; }
-      catch { content.querySelector('#json-hint').textContent = 'Plain text'; content.querySelector('#json-hint').className = 'json-hint'; }
+      try {
+        JSON.parse(message.value);
+        content.querySelector('#json-hint').textContent = '✓ Valid JSON';
+        content.querySelector('#json-hint').className = 'json-hint valid';
+      } catch {
+        content.querySelector('#json-hint').textContent = 'Plain text';
+        content.querySelector('#json-hint').className = 'json-hint';
+      }
     };
     content.querySelector('#publish-form').onsubmit = async (event) => {
       event.preventDefault();
       try {
-        const result = await api.publish(topic.arn, message.value, content.querySelector('#sns-subject').value);
+        const result = await api.publish(
+          topic.arn,
+          message.value,
+          content.querySelector('#sns-subject').value,
+        );
         setStatus(`Message published: ${result.messageId}`);
         event.target.reset();
-      } catch (error) { setStatus(error.message, 'error'); }
+      } catch (error) {
+        setStatus(error.message, 'error');
+      }
     };
-  } catch (error) { showError(content, error); }
+  } catch (error) {
+    showError(content, error);
+  }
 }
 
 export async function renderSns(container) {
@@ -31,10 +45,17 @@ export async function renderSns(container) {
   try {
     const { topics } = await api.topics();
     container.innerHTML = `<div class="page-head"><div><span class="eyebrow">PUB/SUB</span><h1>SNS topics</h1><p>Inspect subscriptions and publish test payloads.</p></div></div><section class="resource-layout"><aside class="resource-list"><label>TOPICS</label>${topics.map((topic, index) => `<button class="resource-option ${index === 0 ? 'active' : ''}" data-topic="${index}"><span>⌁</span><span><b>${escapeHtml(topic.name)}</b><small>${escapeHtml(topic.arn)}</small></span></button>`).join('') || '<div class="empty"><span>No topics found</span></div>'}</aside><div id="topic-content"><div class="empty"><b>Select a topic</b></div></div></section>`;
-    container.querySelectorAll('[data-topic]').forEach((button) => button.onclick = () => {
-      container.querySelectorAll('[data-topic]').forEach((item) => item.classList.toggle('active', item === button));
-      loadTopic(container, topics[button.dataset.topic]);
-    });
+    container.querySelectorAll('[data-topic]').forEach(
+      (button) =>
+        (button.onclick = () => {
+          container
+            .querySelectorAll('[data-topic]')
+            .forEach((item) => item.classList.toggle('active', item === button));
+          loadTopic(container, topics[button.dataset.topic]);
+        }),
+    );
     if (topics[0]) loadTopic(container, topics[0]);
-  } catch (error) { showError(container, error); }
+  } catch (error) {
+    showError(container, error);
+  }
 }

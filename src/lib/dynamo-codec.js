@@ -13,7 +13,9 @@ export function unmarshallValue(value) {
 }
 
 export function unmarshall(item = {}) {
-  return Object.fromEntries(Object.entries(item).map(([key, value]) => [key, unmarshallValue(value)]));
+  return Object.fromEntries(
+    Object.entries(item).map(([key, value]) => [key, unmarshallValue(value)]),
+  );
 }
 
 export function marshallValue(value, schema) {
@@ -21,7 +23,8 @@ export function marshallValue(value, schema) {
   if (type === 'N') return { N: String(value) };
   if (type === 'SS') return { SS: value.map(String) };
   if (type === 'NS') return { NS: value.map(String) };
-  if (type === 'L') return { L: value.map((item, index) => marshallValue(item, schema?.items?.[index])) };
+  if (type === 'L')
+    return { L: value.map((item, index) => marshallValue(item, schema?.items?.[index])) };
   if (type === 'M') return { M: marshall(value, schema?.fields) };
   if (value === null) return { NULL: true };
   if (typeof value === 'string') return { S: value };
@@ -33,5 +36,7 @@ export function marshallValue(value, schema) {
 }
 
 export function marshall(item = {}, schema = {}) {
-  return Object.fromEntries(Object.entries(item).map(([key, value]) => [key, marshallValue(value, schema[key])]));
+  return Object.fromEntries(
+    Object.entries(item).map(([key, value]) => [key, marshallValue(value, schema[key])]),
+  );
 }

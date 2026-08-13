@@ -4,7 +4,6 @@ A browser dashboard for inspecting resources in an existing LocalStack instance,
 
 <img width="1897" height="952" alt="image" src="https://github.com/user-attachments/assets/ca0d5ea5-9004-4ad3-9714-9adae3cd700c" />
 
-
 ## Requirements
 
 - Docker
@@ -77,11 +76,11 @@ Removing the container does not remove LocalStack resources. The viewer only rea
 
 ## Configuration
 
-| Option | Default | Description |
-| --- | --- | --- |
+| Option                | Default                 | Description                                                                                                                                                                                       |
+| --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `LOCALSTACK_ENDPOINT` | `http://localhost:4566` | LocalStack URL reachable from the viewer container. When LocalStack runs on the Docker host, use `http://host.docker.internal:4566` together with `--add-host=host.docker.internal:host-gateway`. |
-| `AWS_DEFAULT_REGION` | `us-east-1` | AWS region displayed and queried by the viewer. |
-| `PORT` | `8888` | HTTP port inside the container. Usually this does not need to be changed; change the left side of `-p 8888:8888` to use another host port. |
+| `AWS_DEFAULT_REGION`  | `us-east-1`             | AWS region displayed and queried by the viewer.                                                                                                                                                   |
+| `PORT`                | `8888`                  | HTTP port inside the container. Usually this does not need to be changed; change the left side of `-p 8888:8888` to use another host port.                                                        |
 
 For example, expose the viewer at port `9090` with `-p 9090:8888`.
 

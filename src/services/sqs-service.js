@@ -19,7 +19,11 @@ export async function listQueues() {
 }
 
 async function peekMessages(queueUrl) {
-  const query = new URLSearchParams({ QueueUrl: queueUrl, ShowInvisible: 'true', ShowDelayed: 'true' });
+  const query = new URLSearchParams({
+    QueueUrl: queueUrl,
+    ShowInvisible: 'true',
+    ShowDelayed: 'true',
+  });
   const response = await localstackRequest(`/_aws/sqs/messages?${query}`);
   return xmlValues(await response.text(), 'Message');
 }
@@ -56,7 +60,8 @@ async function receiveMessageBlocks(queueUrl) {
       const parameters = { QueueUrl: queueUrl };
       blocks.slice(offset, offset + 10).forEach((block, index) => {
         parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.Id`] = String(index);
-        parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.ReceiptHandle`] = xmlValues(block, 'ReceiptHandle')[0];
+        parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.ReceiptHandle`] =
+          xmlValues(block, 'ReceiptHandle')[0];
         parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.VisibilityTimeout`] = '0';
       });
       try {
@@ -72,11 +77,17 @@ async function receiveMessageBlocks(queueUrl) {
 
 export async function receiveMessages(queueUrl) {
   const blocks = await receiveMessageBlocks(queueUrl);
-  const uniqueBlocks = [...new Map(blocks.map((block) => [xmlValues(block, 'MessageId')[0], block])).values()];
+  const uniqueBlocks = [
+    ...new Map(blocks.map((block) => [xmlValues(block, 'MessageId')[0], block])).values(),
+  ];
   const liveMessages = uniqueBlocks.map((block) => {
     const body = xmlValues(block, 'Body')[0] || '';
     let json = null;
-    try { json = JSON.parse(body); } catch { /* Body is plain text. */ }
+    try {
+      json = JSON.parse(body);
+    } catch {
+      /* Body is plain text. */
+    }
     return {
       id: xmlValues(block, 'MessageId')[0],
       md5: xmlValues(block, 'MD5OfBody')[0],
@@ -89,7 +100,11 @@ export async function receiveMessages(queueUrl) {
   });
   await storeMessages(queueUrl, liveMessages);
   const archivedMessages = await storedMessages(queueUrl);
-  return [...new Map([...archivedMessages, ...liveMessages].map((message) => [message.id, message])).values()];
+  return [
+    ...new Map(
+      [...archivedMessages, ...liveMessages].map((message) => [message.id, message]),
+    ).values(),
+  ];
 }
 
 export async function deleteMessage(queueUrl, messageId, receiptHandle) {
@@ -134,7 +149,8 @@ async function deleteMessageById(queueUrl, messageId) {
       const parameters = { QueueUrl: queueUrl };
       untouched.slice(offset, offset + 10).forEach((block, index) => {
         parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.Id`] = String(index);
-        parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.ReceiptHandle`] = xmlValues(block, 'ReceiptHandle')[0];
+        parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.ReceiptHandle`] =
+          xmlValues(block, 'ReceiptHandle')[0];
         parameters[`ChangeMessageVisibilityBatchRequestEntry.${index + 1}.VisibilityTimeout`] = '0';
       });
       await sqs('ChangeMessageVisibilityBatch', parameters);

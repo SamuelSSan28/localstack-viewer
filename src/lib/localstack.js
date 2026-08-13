@@ -10,26 +10,32 @@ export async function localstackRequest(path, options = {}) {
   });
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`LocalStack HTTP ${response.status}${detail ? `: ${detail.slice(0, 180)}` : ''}`);
+    throw new Error(
+      `LocalStack HTTP ${response.status}${detail ? `: ${detail.slice(0, 180)}` : ''}`,
+    );
   }
   return response;
 }
 
 export async function dynamoRequest(action, payload = {}) {
-  return (await localstackRequest('/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-amz-json-1.0',
-      'X-Amz-Target': `DynamoDB_20120810.${action}`,
-    },
-    body: JSON.stringify(payload),
-  })).json();
+  return (
+    await localstackRequest('/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-amz-json-1.0',
+        'X-Amz-Target': `DynamoDB_20120810.${action}`,
+      },
+      body: JSON.stringify(payload),
+    })
+  ).json();
 }
 
-export const xmlValues = (xml, tag) => [...xml.matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>(.*?)</${tag}>`, 'gs'))]
-  .map((match) => match[1]
-    .replaceAll('&quot;', '"')
-    .replaceAll('&apos;', "'")
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&amp;', '&'));
+export const xmlValues = (xml, tag) =>
+  [...xml.matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>(.*?)</${tag}>`, 'gs'))].map((match) =>
+    match[1]
+      .replaceAll('&quot;', '"')
+      .replaceAll('&apos;', "'")
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&amp;', '&'),
+  );

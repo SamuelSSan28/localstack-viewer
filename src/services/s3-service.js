@@ -4,25 +4,28 @@ const encodePath = (value) => String(value).split('/').map(encodeURIComponent).j
 const bucketPath = (bucket, suffix = '') => `/${encodeURIComponent(bucket)}${suffix}`;
 const objectPath = (bucket, key) => bucketPath(bucket, `/${encodePath(key)}`);
 
-const xmlBlocks = (xml, tag) => [...xml.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'g'))].map((match) => match[1]);
+const xmlBlocks = (xml, tag) =>
+  [...xml.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'g'))].map((match) => match[1]);
 
 export async function listBuckets() {
   const xml = await (await localstackRequest('/')).text();
   const names = xmlValues(xml, 'Name');
   const created = xmlValues(xml, 'CreationDate');
-  return Promise.all(names.map(async (name, index) => {
-    try {
-      const locationXml = await (await localstackRequest(`${bucketPath(name)}?location`)).text();
-      const location = xmlValues(locationXml, 'LocationConstraint')[0] || 'us-east-1';
-      // AWS can still return the legacy "EU" value for eu-west-1 buckets.
-      const region = location === 'EU' ? 'eu-west-1' : location;
-      return { name, createdAt: created[index] || '', region };
-    } catch {
-      // One inaccessible bucket should not prevent the remaining buckets from
-      // being listed and filtered.
-      return { name, createdAt: created[index] || '', region: 'unknown' };
-    }
-  }));
+  return Promise.all(
+    names.map(async (name, index) => {
+      try {
+        const locationXml = await (await localstackRequest(`${bucketPath(name)}?location`)).text();
+        const location = xmlValues(locationXml, 'LocationConstraint')[0] || 'us-east-1';
+        // AWS can still return the legacy "EU" value for eu-west-1 buckets.
+        const region = location === 'EU' ? 'eu-west-1' : location;
+        return { name, createdAt: created[index] || '', region };
+      } catch {
+        // One inaccessible bucket should not prevent the remaining buckets from
+        // being listed and filtered.
+        return { name, createdAt: created[index] || '', region: 'unknown' };
+      }
+    }),
+  );
 }
 
 export async function createBucket(name) {
@@ -40,7 +43,9 @@ export async function createBucket(name) {
   return { name };
 }
 
-export async function deleteBucket(name) { await localstackRequest(bucketPath(name), { method: 'DELETE' }); }
+export async function deleteBucket(name) {
+  await localstackRequest(bucketPath(name), { method: 'DELETE' });
+}
 
 export async function listObjects(bucket, prefix = '') {
   const query = new URLSearchParams({ 'list-type': '2' });
@@ -60,31 +65,49 @@ export async function getObject(bucket, key) {
   const response = await localstackRequest(objectPath(bucket, key));
   const bytes = Buffer.from(await response.arrayBuffer());
   const metadata = {};
-  for (const [name, value] of response.headers) if (name.startsWith('x-amz-meta-')) metadata[name.slice(11)] = value;
+  for (const [name, value] of response.headers)
+    if (name.startsWith('x-amz-meta-')) metadata[name.slice(11)] = value;
   const contentType = response.headers.get('content-type') || 'application/octet-stream';
   const textual = /^(text\/|application\/(json|xml|javascript))/.test(contentType);
   return {
-    key, size: bytes.length, contentType,
+    key,
+    size: bytes.length,
+    contentType,
     etag: (response.headers.get('etag') || '').replace(/^"|"$/g, ''),
-    lastModified: response.headers.get('last-modified') || '', metadata,
+    lastModified: response.headers.get('last-modified') || '',
+    metadata,
     preview: textual && bytes.length <= 1024 * 1024 ? bytes.toString('utf8') : null,
   };
 }
 
-export async function downloadObject(bucket, key) { return localstackRequest(objectPath(bucket, key)); }
+export async function downloadObject(bucket, key) {
+  return localstackRequest(objectPath(bucket, key));
+}
 
 export async function uploadObject(bucket, key, content, contentType, metadata = {}) {
   const headers = { 'Content-Type': contentType || 'application/octet-stream' };
-  for (const [name, value] of Object.entries(metadata || {})) headers[`x-amz-meta-${name}`] = String(value);
-  await localstackRequest(objectPath(bucket, key), { method: 'PUT', headers, body: Buffer.from(content, 'base64') });
+  for (const [name, value] of Object.entries(metadata || {}))
+    headers[`x-amz-meta-${name}`] = String(value);
+  await localstackRequest(objectPath(bucket, key), {
+    method: 'PUT',
+    headers,
+    body: Buffer.from(content, 'base64'),
+  });
   return { key };
 }
 
 export async function updateObject(bucket, key, contentType, metadata = {}) {
-  const headers = { 'x-amz-copy-source': `/${encodeURIComponent(bucket)}/${encodePath(key)}`, 'x-amz-metadata-directive': 'REPLACE', 'Content-Type': contentType || 'application/octet-stream' };
-  for (const [name, value] of Object.entries(metadata || {})) headers[`x-amz-meta-${name}`] = String(value);
+  const headers = {
+    'x-amz-copy-source': `/${encodeURIComponent(bucket)}/${encodePath(key)}`,
+    'x-amz-metadata-directive': 'REPLACE',
+    'Content-Type': contentType || 'application/octet-stream',
+  };
+  for (const [name, value] of Object.entries(metadata || {}))
+    headers[`x-amz-meta-${name}`] = String(value);
   await localstackRequest(objectPath(bucket, key), { method: 'PUT', headers });
   return { key };
 }
 
-export async function deleteObject(bucket, key) { await localstackRequest(objectPath(bucket, key), { method: 'DELETE' }); }
+export async function deleteObject(bucket, key) {
+  await localstackRequest(objectPath(bucket, key), { method: 'DELETE' });
+}

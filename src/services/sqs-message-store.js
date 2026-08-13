@@ -30,18 +30,30 @@ async function ensureTable() {
 }
 
 const ready = async () => {
-  tableReady ||= ensureTable().catch((error) => { tableReady = undefined; throw error; });
+  tableReady ||= ensureTable().catch((error) => {
+    tableReady = undefined;
+    throw error;
+  });
   return tableReady;
 };
 
 export async function storeMessages(queueUrl, messages) {
   if (!messages.length) return;
   await ready();
-  await Promise.all(messages.map((message) => dynamoRequest('PutItem', {
-    TableName: messageStoreTable,
-    Item: marshall(Object.fromEntries(Object.entries({ queueUrl, messageId: message.id, ...message })
-      .filter(([, value]) => value !== undefined))),
-  })));
+  await Promise.all(
+    messages.map((message) =>
+      dynamoRequest('PutItem', {
+        TableName: messageStoreTable,
+        Item: marshall(
+          Object.fromEntries(
+            Object.entries({ queueUrl, messageId: message.id, ...message }).filter(
+              ([, value]) => value !== undefined,
+            ),
+          ),
+        ),
+      }),
+    ),
+  );
 }
 
 export async function storedMessages(queueUrl) {
@@ -51,7 +63,10 @@ export async function storedMessages(queueUrl) {
     KeyConditionExpression: 'queueUrl = :queueUrl',
     ExpressionAttributeValues: marshall({ ':queueUrl': queueUrl }),
   });
-  return (result.Items || []).map(({ queueUrl: _queueUrl, messageId: _messageId, ...item }) => ({ ...unmarshall(item), archived: true }));
+  return (result.Items || []).map(({ queueUrl: _queueUrl, messageId: _messageId, ...item }) => ({
+    ...unmarshall(item),
+    archived: true,
+  }));
 }
 
 export async function deleteStoredMessage(queueUrl, messageId) {

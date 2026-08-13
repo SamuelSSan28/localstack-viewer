@@ -16,10 +16,13 @@ test('converts JSON objects to DynamoDB attributes and back', () => {
 });
 
 test('decodes sets returned by DynamoDB', () => {
-  assert.deepEqual(unmarshall({ roles: { SS: ['reader', 'writer'] }, scores: { NS: ['1', '2.5'] } }), {
-    roles: ['reader', 'writer'],
-    scores: ['1', '2.5'],
-  });
+  assert.deepEqual(
+    unmarshall({ roles: { SS: ['reader', 'writer'] }, scores: { NS: ['1', '2.5'] } }),
+    {
+      roles: ['reader', 'writer'],
+      scores: ['1', '2.5'],
+    },
+  );
 });
 
 test('preserves set types when saving an edited item', () => {
