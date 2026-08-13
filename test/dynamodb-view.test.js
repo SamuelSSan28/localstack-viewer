@@ -127,8 +127,11 @@ test('offers an accessible pin control for non-key fields', async () => {
   const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
   const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
   assert.match(view, /data-pin-field=.*Pin field after key columns/);
+  assert.match(view, /class="pin-field .*<svg viewBox="0 0 24 24" aria-hidden="true">/);
+  assert.doesNotMatch(view, /data-pin-field=[^>]*>◆<\/button>/);
   assert.match(view, /state\.pinnedFields\[tableName\]/);
   assert.match(css, /\.pin-field\.pinned/);
+  assert.match(css, /\.pin-field svg \{[^}]*stroke: currentColor;/);
 });
 
 test('copies the complete value represented by one cell', () => {
