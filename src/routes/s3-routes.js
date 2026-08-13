@@ -9,6 +9,7 @@ import {
   getObject,
   listBuckets,
   listObjects,
+  s3Regions,
   updateObject,
   uploadObject,
 } from '../services/s3-service.js';
@@ -18,6 +19,7 @@ async function getS3Buckets(_request, response) {
   return sendJson(response, 200, {
     buckets: await listBuckets(),
     defaultRegion: localstack.region,
+    regions: s3Regions,
   });
 }
 
