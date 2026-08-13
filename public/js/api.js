@@ -25,6 +25,11 @@ export const api = {
     }),
   queues: () => request('/api/sqs/queues'),
   messages: (queueUrl) => request(`/api/sqs/messages?queueUrl=${encodeURIComponent(queueUrl)}`),
+  sendMessage: (queueUrl, message, options = {}) =>
+    request(`/api/sqs/messages?queueUrl=${encodeURIComponent(queueUrl)}`, {
+      method: 'POST',
+      body: JSON.stringify({ message, ...options }),
+    }),
   deleteMessage: (queueUrl, messageId, receiptHandle) =>
     request(`/api/sqs/messages?queueUrl=${encodeURIComponent(queueUrl)}`, {
       method: 'DELETE',

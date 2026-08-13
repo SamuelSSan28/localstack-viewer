@@ -18,6 +18,21 @@ export async function listQueues() {
   return xmlValues(xml, 'QueueUrl').map((url) => ({ name: url.split('/').pop(), url }));
 }
 
+export async function sendMessage(queueUrl, message, options = {}) {
+  const xml = await sqs('SendMessage', {
+    QueueUrl: queueUrl,
+    MessageBody: message,
+    ...(options.messageGroupId ? { MessageGroupId: options.messageGroupId } : {}),
+    ...(options.deduplicationId
+      ? { MessageDeduplicationId: options.deduplicationId }
+      : {}),
+  });
+  return {
+    messageId: xmlValues(xml, 'MessageId')[0],
+    md5: xmlValues(xml, 'MD5OfMessageBody')[0],
+  };
+}
+
 async function peekMessages(queueUrl) {
   const query = new URLSearchParams({
     QueueUrl: queueUrl,
