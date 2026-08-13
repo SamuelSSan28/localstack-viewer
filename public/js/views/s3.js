@@ -5,14 +5,15 @@ let selectedBucket = '';
 const formatBytes = (bytes) => {
   if (!bytes) return '0 B';
   const unit = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), 4);
-  return `${(bytes / (1024 ** unit)).toFixed(unit ? 1 : 0)} ${['B', 'KB', 'MB', 'GB', 'TB'][unit]}`;
+  return `${(bytes / 1024 ** unit).toFixed(unit ? 1 : 0)} ${['B', 'KB', 'MB', 'GB', 'TB'][unit]}`;
 };
-const fileContent = (file) => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
-  reader.onerror = () => reject(reader.error);
-  reader.readAsDataURL(file);
-});
+const fileContent = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 
 async function showDetails(container, bucket, key) {
   const dialog = container.querySelector('#s3-details');
@@ -29,11 +30,23 @@ async function showDetails(container, bucket, key) {
     dialog.querySelector('#save-object').onclick = async () => {
       try {
         const metadata = JSON.parse(body.querySelector('#s3-metadata').value || '{}');
-        await api.updateObject(bucket, key, { contentType: dialog.querySelector('#detail-content-type').value, metadata });
-        setStatus('Object metadata updated'); dialog.close(); await loadObjects(container, bucket);
-      } catch (error) { setStatus(error instanceof SyntaxError ? 'Metadata must be valid JSON' : error.message, 'error'); }
+        await api.updateObject(bucket, key, {
+          contentType: dialog.querySelector('#detail-content-type').value,
+          metadata,
+        });
+        setStatus('Object metadata updated');
+        dialog.close();
+        await loadObjects(container, bucket);
+      } catch (error) {
+        setStatus(
+          error instanceof SyntaxError ? 'Metadata must be valid JSON' : error.message,
+          'error',
+        );
+      }
     };
-  } catch (error) { showError(body, error); }
+  } catch (error) {
+    showError(body, error);
+  }
 }
 
 async function loadObjects(container, bucket) {
@@ -50,21 +63,63 @@ async function loadObjects(container, bucket) {
     const render = () => {
       const query = search.value.trim().toLowerCase();
       const visible = objects.filter((object) => object.key.toLowerCase().includes(query));
-      content.querySelector('#object-results').textContent = `${visible.length} of ${objects.length}`;
-      rows.innerHTML = visible.length ? visible.map((object) => `<tr data-key="${escapeHtml(object.key)}"><td><span class="s3-object-icon">▧</span><code>${escapeHtml(object.key)}</code></td><td><span class="type-badge">${escapeHtml(object.key.includes('.') ? object.key.split('.').pop() : 'file')}</span></td><td>${formatBytes(object.size)}</td><td>${escapeHtml(object.lastModified ? new Date(object.lastModified).toLocaleString() : '—')}</td><td class="actions"><button class="row-action" data-details="${escapeHtml(object.key)}" title="View details">◉</button><button class="row-action delete-action" data-delete="${escapeHtml(object.key)}" title="Delete">×</button></td></tr>`).join('') : '<tr><td colspan="5"><div class="filter-empty">No objects found</div></td></tr>';
-      rows.querySelectorAll('[data-details]').forEach((button) => button.onclick = (event) => { event.stopPropagation(); showDetails(container, bucket, button.dataset.details); });
-      rows.querySelectorAll('[data-delete]').forEach((button) => button.onclick = async (event) => { event.stopPropagation(); if (!confirm(`Delete ${button.dataset.delete}?`)) return; try { await api.deleteObject(bucket, button.dataset.delete); setStatus('Object deleted'); await loadObjects(container, bucket); } catch (error) { setStatus(error.message, 'error'); } });
-      rows.querySelectorAll('tr[data-key]').forEach((row) => row.onclick = () => showDetails(container, bucket, row.dataset.key));
+      content.querySelector('#object-results').textContent =
+        `${visible.length} of ${objects.length}`;
+      rows.innerHTML = visible.length
+        ? visible
+            .map(
+              (object) =>
+                `<tr data-key="${escapeHtml(object.key)}"><td><span class="s3-object-icon">▧</span><code>${escapeHtml(object.key)}</code></td><td><span class="type-badge">${escapeHtml(object.key.includes('.') ? object.key.split('.').pop() : 'file')}</span></td><td>${formatBytes(object.size)}</td><td>${escapeHtml(object.lastModified ? new Date(object.lastModified).toLocaleString() : '—')}</td><td class="actions"><button class="row-action" data-details="${escapeHtml(object.key)}" title="View details">◉</button><button class="row-action delete-action" data-delete="${escapeHtml(object.key)}" title="Delete">×</button></td></tr>`,
+            )
+            .join('')
+        : '<tr><td colspan="5"><div class="filter-empty">No objects found</div></td></tr>';
+      rows.querySelectorAll('[data-details]').forEach(
+        (button) =>
+          (button.onclick = (event) => {
+            event.stopPropagation();
+            showDetails(container, bucket, button.dataset.details);
+          }),
+      );
+      rows.querySelectorAll('[data-delete]').forEach(
+        (button) =>
+          (button.onclick = async (event) => {
+            event.stopPropagation();
+            if (!confirm(`Delete ${button.dataset.delete}?`)) return;
+            try {
+              await api.deleteObject(bucket, button.dataset.delete);
+              setStatus('Object deleted');
+              await loadObjects(container, bucket);
+            } catch (error) {
+              setStatus(error.message, 'error');
+            }
+          }),
+      );
+      rows
+        .querySelectorAll('tr[data-key]')
+        .forEach((row) => (row.onclick = () => showDetails(container, bucket, row.dataset.key)));
     };
-    search.oninput = render; render();
+    search.oninput = render;
+    render();
     content.querySelector('#refresh-objects').onclick = () => loadObjects(container, bucket);
     content.querySelector('#delete-bucket').onclick = async () => {
-      if (objects.length) return setStatus('Delete all objects before deleting this bucket', 'error');
+      if (objects.length)
+        return setStatus('Delete all objects before deleting this bucket', 'error');
       if (!confirm(`Delete empty bucket ${bucket}?`)) return;
-      try { await api.deleteBucket(bucket); setStatus('Bucket deleted'); await renderS3(container); } catch (error) { setStatus(error.message, 'error'); }
+      try {
+        await api.deleteBucket(bucket);
+        setStatus('Bucket deleted');
+        await renderS3(container);
+      } catch (error) {
+        setStatus(error.message, 'error');
+      }
     };
-    content.querySelector('#upload-object').onclick = () => { container.querySelector('#upload-form').reset(); container.querySelector('#upload-dialog').showModal(); };
-  } catch (error) { showError(content, error); }
+    content.querySelector('#upload-object').onclick = () => {
+      container.querySelector('#upload-form').reset();
+      container.querySelector('#upload-dialog').showModal();
+    };
+  } catch (error) {
+    showError(content, error);
+  }
 }
 
 export async function renderS3(container) {
@@ -81,17 +136,32 @@ export async function renderS3(container) {
     const bucketRegion = container.querySelector('#bucket-region');
     let activeContentBucket = '';
     const selectBucket = (button) => {
-      container.querySelectorAll('[data-bucket]').forEach((item) => item.classList.toggle('active', item === button));
+      container
+        .querySelectorAll('[data-bucket]')
+        .forEach((item) => item.classList.toggle('active', item === button));
       activeContentBucket = button.dataset.bucket;
       loadObjects(container, button.dataset.bucket);
     };
     const renderBuckets = () => {
       const query = bucketSearch.value.trim().toLowerCase();
       const region = bucketRegion.value;
-      const visible = buckets.filter((bucket) => bucket.name.toLowerCase().includes(query) && (!region || bucket.region === region));
-      container.querySelector('#bucket-results').textContent = `${visible.length} of ${buckets.length} bucket(s)`;
-      bucketOptions.innerHTML = visible.map((bucket) => `<button class="resource-option ${bucket.name === selectedBucket ? 'active' : ''}" data-bucket="${escapeHtml(bucket.name)}"><span>▱</span><span><b>${escapeHtml(bucket.name)}</b><small><span class="s3-region">${escapeHtml(bucket.region || 'unknown')}</span>${escapeHtml(bucket.createdAt ? new Date(bucket.createdAt).toLocaleDateString() : 'Creation date unavailable')}</small></span></button>`).join('') || `<div class="list-empty"><b>No buckets found</b><span>${buckets.length ? 'Try another name or region.' : 'Create one to upload files.'}</span></div>`;
-      bucketOptions.querySelectorAll('[data-bucket]').forEach((button) => { button.onclick = () => selectBucket(button); });
+      const visible = buckets.filter(
+        (bucket) =>
+          bucket.name.toLowerCase().includes(query) && (!region || bucket.region === region),
+      );
+      container.querySelector('#bucket-results').textContent =
+        `${visible.length} of ${buckets.length} bucket(s)`;
+      bucketOptions.innerHTML =
+        visible
+          .map(
+            (bucket) =>
+              `<button class="resource-option ${bucket.name === selectedBucket ? 'active' : ''}" data-bucket="${escapeHtml(bucket.name)}"><span>▱</span><span><b>${escapeHtml(bucket.name)}</b><small><span class="s3-region">${escapeHtml(bucket.region || 'unknown')}</span>${escapeHtml(bucket.createdAt ? new Date(bucket.createdAt).toLocaleDateString() : 'Creation date unavailable')}</small></span></button>`,
+          )
+          .join('') ||
+        `<div class="list-empty"><b>No buckets found</b><span>${buckets.length ? 'Try another name or region.' : 'Create one to upload files.'}</span></div>`;
+      bucketOptions.querySelectorAll('[data-bucket]').forEach((button) => {
+        button.onclick = () => selectBucket(button);
+      });
       if (visible.length) {
         const target = visible.some((bucket) => bucket.name === selectedBucket)
           ? bucketOptions.querySelector(`[data-bucket="${CSS.escape(selectedBucket)}"]`)
@@ -99,16 +169,50 @@ export async function renderS3(container) {
         if (target.dataset.bucket !== activeContentBucket) selectBucket(target);
       } else {
         activeContentBucket = '';
-        container.querySelector('#s3-content').innerHTML = '<div class="empty"><b>No bucket selected</b><span>Change the filters to browse a bucket.</span></div>';
+        container.querySelector('#s3-content').innerHTML =
+          '<div class="empty"><b>No bucket selected</b><span>Change the filters to browse a bucket.</span></div>';
       }
     };
     bucketSearch.oninput = renderBuckets;
     bucketRegion.onchange = renderBuckets;
-    container.querySelector('#new-bucket').onclick = async () => { const name = prompt('New bucket name'); if (!name) return; try { await api.createBucket(name.trim()); setStatus('Bucket created'); await renderS3(container); } catch (error) { setStatus(error.message, 'error'); } };
-    container.querySelector('#upload-form').onsubmit = async (event) => { event.preventDefault(); const files = [...container.querySelector('#upload-files').files]; if (!files.length) return; const prefix = container.querySelector('#upload-prefix').value.trim().replace(/^\/+|\/+$/g, ''); try { for (const file of files) await api.uploadObject(selectedBucket, { key: `${prefix ? `${prefix}/` : ''}${file.name}`, contentType: file.type, content: await fileContent(file) }); setStatus(`${files.length} file(s) uploaded`); container.querySelector('#upload-dialog').close(); await loadObjects(container, selectedBucket); } catch (error) { setStatus(error.message, 'error'); } };
+    container.querySelector('#new-bucket').onclick = async () => {
+      const name = prompt('New bucket name');
+      if (!name) return;
+      try {
+        await api.createBucket(name.trim());
+        setStatus('Bucket created');
+        await renderS3(container);
+      } catch (error) {
+        setStatus(error.message, 'error');
+      }
+    };
+    container.querySelector('#upload-form').onsubmit = async (event) => {
+      event.preventDefault();
+      const files = [...container.querySelector('#upload-files').files];
+      if (!files.length) return;
+      const prefix = container
+        .querySelector('#upload-prefix')
+        .value.trim()
+        .replace(/^\/+|\/+$/g, '');
+      try {
+        for (const file of files)
+          await api.uploadObject(selectedBucket, {
+            key: `${prefix ? `${prefix}/` : ''}${file.name}`,
+            contentType: file.type,
+            content: await fileContent(file),
+          });
+        setStatus(`${files.length} file(s) uploaded`);
+        container.querySelector('#upload-dialog').close();
+        await loadObjects(container, selectedBucket);
+      } catch (error) {
+        setStatus(error.message, 'error');
+      }
+    };
     selectedBucket = buckets.some((bucket) => bucket.name === selectedBucket) ? selectedBucket : '';
     renderBuckets();
-  } catch (error) { showError(container, error); }
+  } catch (error) {
+    showError(container, error);
+  }
 }
 
 export { formatBytes };

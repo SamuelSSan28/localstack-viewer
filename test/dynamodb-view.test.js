@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { clipboardValue, compareDynamoValues, orderedFieldNames, orderJsonValue, PAGE_SIZE, structuredPreview } from '../public/js/views/dynamodb.js';
+import {
+  clipboardValue,
+  compareDynamoValues,
+  orderedFieldNames,
+  orderJsonValue,
+  PAGE_SIZE,
+  structuredPreview,
+} from '../public/js/views/dynamodb.js';
 
 test('limits DynamoDB table pages to ten rows', async () => {
   const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
@@ -9,22 +16,46 @@ test('limits DynamoDB table pages to ten rows', async () => {
   assert.equal(PAGE_SIZE, 10);
   assert.match(view, /visibleIndices\.slice\(pageStart, pageStart \+ PAGE_SIZE\)/);
   assert.match(view, /class="table-pagination"/);
-  assert.match(css, /\.table-scroll \{ max-width: 100%; overflow: auto;/);
+  assert.match(css, /\.table-scroll \{\s+max-width: 100%;\s+overflow: auto;/);
 });
 
 test('places DynamoDB keys first and sorts remaining fields alphabetically', () => {
-  const items = [{ zebra: 1, sortKey: 2 }, { alpha: 3, partitionKey: 4 }];
-  assert.deepEqual(orderedFieldNames(items, ['partitionKey', 'sortKey']), ['partitionKey', 'sortKey', 'alpha', 'zebra']);
+  const items = [
+    { zebra: 1, sortKey: 2 },
+    { alpha: 3, partitionKey: 4 },
+  ];
+  assert.deepEqual(orderedFieldNames(items, ['partitionKey', 'sortKey']), [
+    'partitionKey',
+    'sortKey',
+    'alpha',
+    'zebra',
+  ]);
 });
 
 test('places pinned fields after DynamoDB keys in the order they were pinned', () => {
   const items = [{ zebra: 1, status: 2, sortKey: 3, name: 4, partitionKey: 5 }];
-  assert.deepEqual(orderedFieldNames(items, ['partitionKey', 'sortKey'], ['status', 'name']), ['partitionKey', 'sortKey', 'status', 'name', 'zebra']);
+  assert.deepEqual(orderedFieldNames(items, ['partitionKey', 'sortKey'], ['status', 'name']), [
+    'partitionKey',
+    'sortKey',
+    'status',
+    'name',
+    'zebra',
+  ]);
 });
 
 test('orders JSON keys first at the root and alphabetically in nested objects', () => {
-  const value = { zebra: 1, partitionKey: 'key', details: { zebra: 2, alpha: 1 }, list: [{ beta: 2, alpha: 1 }] };
-  assert.deepEqual(Object.keys(orderJsonValue(value, ['partitionKey'])), ['partitionKey', 'details', 'list', 'zebra']);
+  const value = {
+    zebra: 1,
+    partitionKey: 'key',
+    details: { zebra: 2, alpha: 1 },
+    list: [{ beta: 2, alpha: 1 }],
+  };
+  assert.deepEqual(Object.keys(orderJsonValue(value, ['partitionKey'])), [
+    'partitionKey',
+    'details',
+    'list',
+    'zebra',
+  ]);
   assert.deepEqual(Object.keys(orderJsonValue(value).details), ['alpha', 'zebra']);
   assert.deepEqual(Object.keys(orderJsonValue(value).list[0]), ['alpha', 'beta']);
 });
@@ -45,16 +76,28 @@ test('keeps missing column values at the end in either direction', () => {
 });
 
 test('summarizes structured values without adding an interactive JSON control', () => {
-  assert.deepEqual(structuredPreview({ status: 'created' }, 'M'), { kind: 'Object', preview: '{"status":"created"}' });
-  assert.deepEqual(structuredPreview(['one', 'two'], 'L'), { kind: 'Array (2)', preview: '["one","two"]' });
-  assert.deepEqual(structuredPreview(['one', 'two'], 'SS'), { kind: 'Set (2)', preview: '["one","two"]' });
-  assert.equal(structuredPreview({ description: 'a'.repeat(100) }, 'M').preview.endsWith('…'), true);
+  assert.deepEqual(structuredPreview({ status: 'created' }, 'M'), {
+    kind: 'Object',
+    preview: '{"status":"created"}',
+  });
+  assert.deepEqual(structuredPreview(['one', 'two'], 'L'), {
+    kind: 'Array (2)',
+    preview: '["one","two"]',
+  });
+  assert.deepEqual(structuredPreview(['one', 'two'], 'SS'), {
+    kind: 'Set (2)',
+    preview: '["one","two"]',
+  });
+  assert.equal(
+    structuredPreview({ description: 'a'.repeat(100) }, 'M').preview.endsWith('…'),
+    true,
+  );
 });
 
 test('keeps one full-height JSON editor for both view and edit modes', async () => {
   const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
   const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
-  assert.match(css, /body:has\(dialog\[open\]\) \{ overflow: hidden; \}/);
+  assert.match(css, /body:has\(dialog\[open\]\) \{\s+overflow: hidden;\s+\}/);
   assert.match(css, /#editor\[open\].*width: min\(1240px.*height: min\(820px/s);
   assert.match(css, /\.item-json-editor.*overscroll-behavior: contain.*flex: 1/s);
   assert.match(view, /editor\.readOnly = !isEditing/);
@@ -96,6 +139,6 @@ test('copies the complete value represented by one cell', () => {
 test('declares the star favicon', async () => {
   const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
   const favicon = await readFile(new URL('../public/favicon.svg', import.meta.url), 'utf8');
-  assert.match(html, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
+  assert.match(html, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml" \/>/);
   assert.match(favicon, /fill="#facc15"/);
 });
