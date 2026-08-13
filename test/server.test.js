@@ -14,4 +14,14 @@ test('rejects static directories without terminating the server', async (context
   const health = await fetch(`http://127.0.0.1:${port}/api/health`);
   assert.equal(health.status, 200);
   assert.deepEqual(await health.json(), { ok: true });
+
+  const unsupportedMethod = await fetch(`http://127.0.0.1:${port}/api/health`, {
+    method: 'POST',
+  });
+  assert.equal(unsupportedMethod.status, 404);
+  assert.deepEqual(await unsupportedMethod.json(), { error: 'Endpoint not found' });
+
+  const missingBucket = await fetch(`http://127.0.0.1:${port}/api/s3/objects`);
+  assert.equal(missingBucket.status, 400);
+  assert.deepEqual(await missingBucket.json(), { error: 'bucket is required' });
 });
