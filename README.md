@@ -79,7 +79,7 @@ Removing the container does not remove LocalStack resources. The viewer only rea
 | Option                | Default                 | Description                                                                                                                                                                                       |
 | --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `LOCALSTACK_ENDPOINT` | `http://localhost:4566` | LocalStack URL reachable from the viewer container. When LocalStack runs on the Docker host, use `http://host.docker.internal:4566` together with `--add-host=host.docker.internal:host-gateway`. |
-| `AWS_DEFAULT_REGION`  | `us-east-1`             | AWS region displayed and queried by the viewer.                                                                                                                                                   |
+| `AWS_DEFAULT_REGION`  | `us-east-1`             | Initial region suggested when creating an S3 bucket. You can choose or type a different region in the create-bucket dialog.                                                                       |
 | `PORT`                | `8888`                  | HTTP port inside the container. Usually this does not need to be changed; change the left side of `-p 8888:8888` to use another host port.                                                        |
 
 For example, expose the viewer at port `9090` with `-p 9090:8888`.

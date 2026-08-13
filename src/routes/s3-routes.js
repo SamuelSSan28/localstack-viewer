@@ -1,5 +1,6 @@
 import { badRequest } from '../errors.js';
 import { readJson, sendJson } from '../http.js';
+import { localstack } from '../lib/localstack.js';
 import {
   createBucket,
   deleteBucket,
@@ -14,13 +15,18 @@ import {
 import { exactRoute, required } from './route-utils.js';
 
 async function getS3Buckets(_request, response) {
-  return sendJson(response, 200, { buckets: await listBuckets() });
+  return sendJson(response, 200, {
+    buckets: await listBuckets(),
+    defaultRegion: localstack.region,
+  });
 }
 
 async function createS3Bucket(request, response) {
-  const { name } = await readJson(request);
+  const { name, region = localstack.region } = await readJson(request);
   required(name, 'Bucket name');
-  return sendJson(response, 201, { bucket: await createBucket(name) });
+  if (typeof region !== 'string' || !/^[a-z]{2}(?:-[a-z0-9]+)+-\d$/.test(region))
+    throw badRequest('Region must be a valid AWS region (for example, us-east-1)');
+  return sendJson(response, 201, { bucket: await createBucket(name, region) });
 }
 
 async function removeS3Bucket(request, response) {

@@ -125,11 +125,12 @@ async function loadObjects(container, bucket) {
 export async function renderS3(container) {
   showLoading(container, 'Listing S3 buckets…');
   try {
-    const { buckets } = await api.buckets();
+    const { buckets, defaultRegion = 'us-east-1' } = await api.buckets();
     const regions = [...new Set(buckets.map((bucket) => bucket.region || 'unknown'))].sort();
     container.innerHTML = `<div class="page-head"><div><span class="eyebrow">STORAGE</span><h1>S3 buckets</h1><p>Browse files, inspect metadata and upload development assets.</p></div><button class="button" id="new-bucket">New bucket</button></div>
       <section class="resource-layout"><aside class="resource-list s3-bucket-list"><label>BUCKETS</label><div class="s3-bucket-filters"><input id="bucket-search" type="search" aria-label="Search buckets" placeholder="Search buckets…"><select id="bucket-region" aria-label="Filter buckets by region"><option value="">All regions</option>${regions.map((region) => `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`).join('')}</select><small id="bucket-results"></small></div><div id="bucket-options"></div></aside><div id="s3-content"><div class="empty"><b>Select a bucket</b></div></div></section>
       <dialog id="upload-dialog"><form method="dialog" id="upload-form"><div class="dialog-head"><div><span class="eyebrow">S3 UPLOAD</span><h2>Upload files</h2></div><button class="icon-button dialog-x" value="cancel">×</button></div><label>Files</label><input id="upload-files" type="file" multiple required><label>Key prefix <span class="hint">optional</span></label><input id="upload-prefix" placeholder="images/2026"><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" id="submit-upload" value="default">Upload</button></div></form></dialog>
+      <dialog id="bucket-dialog"><form method="dialog" id="bucket-form"><div class="dialog-head"><div><span class="eyebrow">S3 BUCKET</span><h2>Create bucket</h2></div><button class="icon-button dialog-x" value="cancel">×</button></div><label>Bucket name</label><input id="new-bucket-name" required autocomplete="off" placeholder="my-local-bucket"><label>Region</label><input id="new-bucket-region" required list="aws-regions" value="${escapeHtml(defaultRegion)}" placeholder="us-east-1"><datalist id="aws-regions"><option value="us-east-1"><option value="us-east-2"><option value="us-west-1"><option value="us-west-2"><option value="eu-west-1"><option value="eu-central-1"><option value="sa-east-1"><option value="ap-southeast-1"></datalist><p class="hint">Choose the LocalStack region for this bucket. The server default is only preselected.</p><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button" value="default">Create</button></div></form></dialog>
       <dialog id="s3-details"><div class="dialog-head"><div><span class="eyebrow">OBJECT</span><h2>Object details</h2></div><button class="icon-button dialog-x" onclick="this.closest('dialog').close()">×</button></div><label>Content type</label><input id="detail-content-type"><div class="s3-detail-body"></div><div class="dialog-actions"><a class="button secondary" id="download-object">Download</a><button class="button" id="save-object">Save metadata</button></div></dialog>`;
     const bucketOptions = container.querySelector('#bucket-options');
     const bucketSearch = container.querySelector('#bucket-search');
@@ -175,12 +176,19 @@ export async function renderS3(container) {
     };
     bucketSearch.oninput = renderBuckets;
     bucketRegion.onchange = renderBuckets;
-    container.querySelector('#new-bucket').onclick = async () => {
-      const name = prompt('New bucket name');
-      if (!name) return;
+    container.querySelector('#new-bucket').onclick = () => {
+      container.querySelector('#bucket-form').reset();
+      container.querySelector('#new-bucket-region').value = defaultRegion;
+      container.querySelector('#bucket-dialog').showModal();
+    };
+    container.querySelector('#bucket-form').onsubmit = async (event) => {
+      event.preventDefault();
+      const name = container.querySelector('#new-bucket-name').value.trim();
+      const region = container.querySelector('#new-bucket-region').value.trim();
       try {
-        await api.createBucket(name.trim());
-        setStatus('Bucket created');
+        await api.createBucket(name, region);
+        setStatus(`Bucket created in ${region}`);
+        container.querySelector('#bucket-dialog').close();
         await renderS3(container);
       } catch (error) {
         setStatus(error.message, 'error');
