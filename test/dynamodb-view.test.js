@@ -132,6 +132,7 @@ test('offers an accessible pin control for non-key fields', async () => {
   assert.match(view, /state\.pinnedFields\[tableName\]/);
   assert.match(css, /\.pin-field\.pinned/);
   assert.match(css, /\.pin-field svg \{[^}]*stroke: currentColor;/);
+  assert.match(css, /\.pin-field:hover,\s*\.pin-field\.pinned \{\s*color: #fff;/);
 });
 
 test('copies the complete value represented by one cell', () => {

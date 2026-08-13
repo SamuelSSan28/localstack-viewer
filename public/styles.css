@@ -1203,11 +1203,28 @@ textarea {
   width: 100%;
   margin-top: 14px;
 }
-.sqs-send-panel {
-  margin-bottom: 18px;
+.sqs-send-dialog .dialog-head p {
+  margin: 5px 0 0;
+  color: #8791a5;
+  font-size: 11px;
 }
-.sqs-send-panel textarea {
-  min-height: 110px;
+.sqs-send-dialog label:not(:first-child) {
+  margin-top: 14px;
+}
+.sqs-send-dialog label .hint {
+  font-weight: 400;
+}
+.sqs-send-dialog input,
+.sqs-send-dialog textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #dce2ea;
+  border-radius: 7px;
+  outline-color: #684bd9;
+  font-size: 11px;
+}
+.sqs-send-dialog textarea {
+  min-height: 150px;
 }
 .json-hint {
   margin-top: 5px;
@@ -1460,6 +1477,10 @@ th,
 .sort-column.active .sort-indicator {
   color: #c4b8ff;
 }
+.pin-field:hover,
+.pin-field.pinned {
+  color: #fff;
+}
 .copy-column {
   color: #aab4c7;
 }
@@ -1529,7 +1550,8 @@ dialog::backdrop {
 }
 textarea,
 .publish-panel input,
-.publish-panel textarea {
+.publish-panel textarea,
+.sqs-send-dialog input {
   color: #dce2ed;
   background: #0d1424;
   border-color: #303b50;

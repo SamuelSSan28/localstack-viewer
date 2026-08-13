@@ -24,7 +24,10 @@ test('sends a message to an SQS queue', async (context) => {
   );
 
   assert.equal(request.searchParams.get('Action'), 'SendMessage');
-  assert.equal(request.searchParams.get('QueueUrl'), 'http://localhost:4566/000000000000/events.fifo');
+  assert.equal(
+    request.searchParams.get('QueueUrl'),
+    'http://localhost:4566/000000000000/events.fifo',
+  );
   assert.equal(request.searchParams.get('MessageBody'), '{"event":"created"}');
   assert.equal(request.searchParams.get('MessageGroupId'), 'events');
   assert.equal(request.searchParams.get('MessageDeduplicationId'), 'event-123');
@@ -38,6 +41,9 @@ test('exposes the SQS send-message form and client API', async () => {
     readFile(new URL('../src/routes/sqs-routes.js', import.meta.url), 'utf8'),
   ]);
   assert.match(view, /id="sqs-send-form"/);
+  assert.match(view, /id="open-sqs-send"/);
+  assert.match(view, /id="sqs-send-dialog"/);
+  assert.match(view, /sendDialog\.showModal\(\)/);
   assert.match(view, /messageGroupId/);
   assert.match(api, /sendMessage:/);
   assert.match(routes, /POST: addMessage/);
