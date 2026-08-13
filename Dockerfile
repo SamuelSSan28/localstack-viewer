@@ -6,4 +6,4 @@ COPY src ./src
 COPY public ./public
 USER node
 EXPOSE 8888
-CMD ["node", "src/server.js"]
+CMD ["node", "/app/src/server.js"]

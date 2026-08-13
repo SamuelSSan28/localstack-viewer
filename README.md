@@ -30,6 +30,17 @@ docker run -d \
 
 Open [http://localhost:8888](http://localhost:8888).
 
+The application writes structured request, startup, and error details to the
+container's standard output. Follow them while troubleshooting with:
+
+```bash
+docker logs --follow --timestamps localstack-viewer
+```
+
+Each API request includes its method, path, response status, and duration.
+Failures also include the error type and stack trace. Set `LOG_LEVEL=error` to
+show only failures, or `LOG_LEVEL=debug` for maximum verbosity.
+
 ### ARM64 hosts
 
 The image is published for both `linux/amd64` and `linux/arm64`. Docker
@@ -83,6 +94,7 @@ Removing the container does not remove LocalStack resources. The viewer only rea
 | `AWS_ACCESS_KEY_ID`   | `test`                  | Access key used to sign S3 requests. The default matches LocalStack's standard development credentials.                                                                                           |
 | `AWS_SECRET_ACCESS_KEY` | `test`                | Secret key used to sign S3 requests. Set it with the access key when LocalStack authentication is configured.                                                                                      |
 | `PORT`                | `8888`                  | HTTP port inside the container. Usually this does not need to be changed; change the left side of `-p 8888:8888` to use another host port.                                                        |
+| `LOG_LEVEL`           | `info`                  | Container log verbosity: `debug`, `info`, or `error`. Logs are emitted as one JSON object per line for easy filtering.                                                                         |
 
 For example, expose the viewer at port `9090` with `-p 9090:8888`.
 
