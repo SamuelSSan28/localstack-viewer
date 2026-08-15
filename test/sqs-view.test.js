@@ -154,6 +154,32 @@ test('reads the sent timestamp from SQS system attributes', async (context) => {
   );
 });
 
+test('reads SQS message attributes used by notification envelopes', async (context) => {
+  const originalFetch = global.fetch;
+  context.after(() => {
+    global.fetch = originalFetch;
+  });
+  global.fetch = async (url, options) => {
+    if (options?.headers?.['X-Amz-Target'])
+      return Response.json(options.headers['X-Amz-Target'].endsWith('.Query') ? { Items: [] } : {});
+    return new Response(`<ReceiveMessageResponse><ReceiveMessageResult><Message>
+      <MessageId>welcome-message</MessageId><ReceiptHandle>receipt</ReceiptHandle>
+      <Body>{&quot;event_type&quot;:&quot;guardian_account_created&quot;,&quot;data&quot;:{}}</Body>
+      <MessageAttribute><Name>EventType</Name><Value><StringValue>guardian_account_created</StringValue><DataType>String</DataType></Value></MessageAttribute>
+      <MessageAttribute><Name>UserId</Name><Value><StringValue>user-123</StringValue><DataType>String</DataType></Value></MessageAttribute>
+    </Message></ReceiveMessageResult></ReceiveMessageResponse>`);
+  };
+
+  const [message] = await receiveMessages('http://localhost:4566/000000000000/notifications');
+
+  assert.deepEqual(message.messageAttributes, {
+    EventType: { dataType: 'String', value: 'guardian_account_created' },
+    UserId: { dataType: 'String', value: 'user-123' },
+  });
+  assert.equal(message.json.event_type, 'guardian_account_created');
+  assert.deepEqual(message.json.data, {});
+});
+
 test('reads subsequent batches and restores every message immediately', async (context) => {
   const originalFetch = global.fetch;
   context.after(() => {
@@ -268,6 +294,18 @@ test('identifies common SQS event type fields', () => {
   assert.equal(eventTypeOf({ json: { 'detail-type': 'Order created' } }), 'Order created');
   assert.equal(eventTypeOf({ json: { eventType: 'invoice.paid' } }), 'invoice.paid');
   assert.equal(eventTypeOf({ json: { type: 'user.updated' } }), 'user.updated');
+});
+
+test('uses EventType message attributes when a welcome body has no event type', () => {
+  assert.equal(
+    eventTypeOf({
+      json: { data: {} },
+      messageAttributes: {
+        EventType: { dataType: 'String', value: 'independent_student_account_created' },
+      },
+    }),
+    'independent_student_account_created',
+  );
 });
 
 test('identifies event types inside SNS message envelopes', () => {
