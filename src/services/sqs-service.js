@@ -13,6 +13,26 @@ const messageAttribute = (block, name) => {
   return null;
 };
 
+const messageAttributes = (block) =>
+  Object.fromEntries(
+    xmlValues(block, 'MessageAttribute').flatMap((attribute) => {
+      const name = xmlValues(attribute, 'Name')[0];
+      if (!name) return [];
+      const valueBlock = xmlValues(attribute, 'Value')[0] || '';
+      const value =
+        xmlValues(valueBlock, 'StringValue')[0] ?? xmlValues(valueBlock, 'BinaryValue')[0] ?? '';
+      return [
+        [
+          name,
+          {
+            dataType: xmlValues(valueBlock, 'DataType')[0] || 'String',
+            value,
+          },
+        ],
+      ];
+    }),
+  );
+
 export async function listQueues() {
   const xml = await sqs('ListQueues');
   return xmlValues(xml, 'QueueUrl').map((url) => ({ name: url.split('/').pop(), url }));
@@ -108,6 +128,7 @@ export async function receiveMessages(queueUrl) {
       md5: xmlValues(block, 'MD5OfBody')[0],
       receiptHandle: xmlValues(block, 'ReceiptHandle')[0],
       sentTimestamp: messageAttribute(block, 'SentTimestamp'),
+      messageAttributes: messageAttributes(block),
       body,
       json,
       archived: false,

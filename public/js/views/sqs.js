@@ -5,8 +5,10 @@ let activeQueue;
 export const MESSAGE_PAGE_SIZE = 10;
 
 export const eventTypeOf = (message) => {
+  const attributeEventType =
+    message.messageAttributes?.EventType?.value || message.messageAttributes?.event_type?.value;
   if (!message.json || Array.isArray(message.json))
-    return message.json ? 'JSON event' : 'Text message';
+    return attributeEventType || (message.json ? 'JSON event' : 'Text message');
   const payload =
     message.json.Message && typeof message.json.Message === 'string'
       ? (() => {
@@ -28,7 +30,7 @@ export const eventTypeOf = (message) => {
     source.Event;
   return typeof eventType === 'string' || typeof eventType === 'number'
     ? String(eventType)
-    : 'JSON event';
+    : attributeEventType || 'JSON event';
 };
 
 const decodedPayloadOf = (message) => {
@@ -80,6 +82,17 @@ const bodyView = (message) =>
     ? `<pre class="json-viewer"><code>${escapeHtml(JSON.stringify(message.json, null, 2))}</code></pre>`
     : `<pre class="message-text">${escapeHtml(message.body)}</pre>`;
 
+const attributesView = (message) => {
+  const attributes = Object.entries(message.messageAttributes || {});
+  if (!attributes.length) return '';
+  return `<dt>Message attributes</dt><dd><dl class="message-attributes">${attributes
+    .map(
+      ([name, attribute]) =>
+        `<dt>${escapeHtml(name)}</dt><dd><code>${escapeHtml(attribute.value)}</code> <small>${escapeHtml(attribute.dataType)}</small></dd>`,
+    )
+    .join('')}</dl></dd>`;
+};
+
 const messageCard = (message, originalIndex) => `<article class="message-card">
   <div class="message-meta">
     <span class="event-type-badge" title="Event type">${escapeHtml(eventTypeOf(message))}</span>
@@ -89,7 +102,7 @@ const messageCard = (message, originalIndex) => `<article class="message-card">
     <button class="danger-link" data-remove="${originalIndex}">Delete</button>
   </div>
   ${bodyView(message)}
-  <details><summary>Technical metadata</summary><dl><dt>Message ID</dt><dd>${escapeHtml(message.id)}</dd><dt>MD5</dt><dd>${escapeHtml(message.md5)}</dd><dt>Sent</dt><dd>${escapeHtml(formattedTime(message))}</dd></dl></details>
+  <details><summary>Technical metadata</summary><dl><dt>Message ID</dt><dd>${escapeHtml(message.id)}</dd><dt>MD5</dt><dd>${escapeHtml(message.md5)}</dd><dt>Sent</dt><dd>${escapeHtml(formattedTime(message))}</dd>${attributesView(message)}</dl></details>
 </article>`;
 
 async function loadMessages(container, queue, { background = false, notify = false } = {}) {
