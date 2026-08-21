@@ -20,6 +20,162 @@ select,
 textarea {
   font: inherit;
 }
+
+/* Searchable, consistent replacement for browser-native dropdowns. */
+.modern-select {
+  position: relative;
+  min-width: 0;
+}
+.modern-select > select {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.modern-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 34px 8px 11px;
+  overflow: hidden;
+  border: 1px solid #3b4860;
+  border-radius: 8px;
+  color: #e7ebf3;
+  background: #172033;
+  font-size: 11px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.modern-select-trigger::after {
+  position: absolute;
+  right: 12px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid #a99af0;
+  border-bottom: 2px solid #a99af0;
+  content: '';
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s;
+}
+.modern-select-trigger:hover {
+  border-color: #5a6780;
+  background: #1b263b;
+}
+.modern-select-trigger:focus-visible,
+.modern-select.open .modern-select-trigger {
+  border-color: #8068e5;
+  outline: none;
+  box-shadow: 0 0 0 3px #684bd92e;
+}
+.modern-select.open .modern-select-trigger::after {
+  transform: translateY(2px) rotate(225deg);
+}
+.modern-select-panel {
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 7px);
+  left: 0;
+  width: max(100%, 210px);
+  padding: 7px;
+  border: 1px solid #354159;
+  border-radius: 11px;
+  background: #121a2b;
+  box-shadow: 0 18px 45px #05081280;
+}
+.modern-select-panel[hidden] {
+  display: none;
+}
+.modern-select-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  padding: 0 9px;
+  border: 1px solid #344158;
+  border-radius: 7px;
+  color: #8995aa;
+  background: #0d1422;
+}
+.modern-select-search:focus-within {
+  border-color: #7159d8;
+  box-shadow: 0 0 0 2px #684bd924;
+}
+.modern-select-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 0;
+  border: 0;
+  outline: 0;
+  color: #eef2f8;
+  background: transparent;
+  font-size: 11px;
+}
+.modern-select-options {
+  max-height: 230px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #45516a transparent;
+  scrollbar-width: thin;
+}
+.modern-select-options button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  color: #bec7d6;
+  background: transparent;
+  font-size: 11px;
+  text-align: left;
+}
+.modern-select-options button:hover,
+.modern-select-options button:focus-visible {
+  color: #f1efff;
+  background: #24203e;
+  outline: none;
+}
+.modern-select-options button.selected {
+  color: #c4b8ff;
+  background: #292249;
+}
+.modern-select-options button b {
+  color: #a994ff;
+}
+.modern-select-empty {
+  padding: 18px 10px;
+  color: #7f8ba0;
+  font-size: 11px;
+  text-align: center;
+}
+.modern-select-trigger:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.item-filter .modern-select {
+  flex: 0 1 150px;
+  border-left: 1px solid #303b50;
+}
+.item-filter .modern-select-trigger {
+  min-height: 33px;
+  border: 0;
+  border-radius: 0 7px 7px 0;
+  background: transparent;
+}
+.s3-bucket-filters .modern-select,
+dialog .modern-select {
+  width: 100%;
+}
 button {
   cursor: pointer;
 }
@@ -1261,6 +1417,7 @@ textarea {
   color: #8a5416;
   background: #fff1d9;
 }
+.type-JSON,
 .type-M,
 .type-L {
   color: #6545c8;
@@ -1608,6 +1765,7 @@ textarea,
   color: #efbd72;
   background: #44311a;
 }
+.type-JSON,
 .type-M,
 .type-L {
   color: #b7a4f8;
