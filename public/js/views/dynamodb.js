@@ -104,6 +104,18 @@ export function structuredPreview(value, type, limit = 72) {
   return { kind, preview };
 }
 
+export function parseJsonString(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed || !['{', '['].includes(trimmed[0])) return null;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export function compareDynamoValues(left, right, leftType, rightType, direction = 'asc') {
   const a = sortableValue(left, leftType);
   const b = sortableValue(right, rightType);
@@ -119,6 +131,12 @@ export function compareDynamoValues(left, right, leftType, rightType, direction 
 }
 
 function renderAttribute(value, type) {
+  const parsedJson = type === 'S' ? parseJsonString(value) : null;
+  if (parsedJson) {
+    const jsonType = Array.isArray(parsedJson) ? 'L' : 'M';
+    const { kind, preview } = structuredPreview(parsedJson, jsonType);
+    return `<span class="attribute-type type-JSON">JSON</span><span class="structured-value json-value"><b>${escapeHtml(kind)}</b><code>${escapeHtml(preview)}</code></span>`;
+  }
   const label = `<span class="attribute-type type-${escapeHtml(type)}">${escapeHtml(typeNames[type] || type)}</span>`;
   if (type === 'BOOL')
     return `${label}<span class="boolean-value ${value ? 'true' : 'false'}">${value ? 'true' : 'false'}</span>`;
@@ -286,10 +304,14 @@ function renderItems(container, tableName) {
   area.querySelector('#new-item').onclick = () => openEditor(container, tableName);
   area.querySelector('#refresh-items').onclick = () => loadItems(container, tableName);
   area.querySelector('#item-search').oninput = (event) => {
+    const selectionStart = event.target.selectionStart;
+    const selectionEnd = event.target.selectionEnd;
     currentPage = 1;
     updateTableFilter(tableName, { query: event.target.value });
     renderItems(container, tableName);
-    container.querySelector('#item-search').focus();
+    const search = container.querySelector('#item-search');
+    search.focus();
+    search.setSelectionRange(selectionStart, selectionEnd);
   };
   area.querySelector('#filter-field').onchange = (event) => {
     currentPage = 1;

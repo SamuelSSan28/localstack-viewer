@@ -7,6 +7,7 @@ import {
   orderedFieldNames,
   orderJsonValue,
   PAGE_SIZE,
+  parseJsonString,
   structuredPreview,
 } from '../public/js/views/dynamodb.js';
 
@@ -92,6 +93,17 @@ test('summarizes structured values without adding an interactive JSON control', 
     structuredPreview({ description: 'a'.repeat(100) }, 'M').preview.endsWith('…'),
     true,
   );
+});
+
+test('parses JSON stored in string attributes for a clean table preview', () => {
+  assert.deepEqual(parseJsonString(' {"status":"created","items":[1,2]} '), {
+    status: 'created',
+    items: [1, 2],
+  });
+  assert.deepEqual(parseJsonString('[{"id":1}]'), [{ id: 1 }]);
+  assert.equal(parseJsonString('ordinary string'), null);
+  assert.equal(parseJsonString('{invalid json}'), null);
+  assert.equal(parseJsonString('42'), null);
 });
 
 test('keeps one full-height JSON editor for both view and edit modes', async () => {

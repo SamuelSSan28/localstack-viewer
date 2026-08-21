@@ -4,6 +4,7 @@ import { renderOverview } from './js/views/overview.js';
 import { renderSqs } from './js/views/sqs.js';
 import { renderSns } from './js/views/sns.js';
 import { renderS3 } from './js/views/s3.js';
+import { initializeSelects } from './js/ui.js';
 
 const views = {
   overview: renderOverview,
@@ -14,6 +15,7 @@ const views = {
   emails: renderEmails,
 };
 const container = document.querySelector('#view');
+initializeSelects();
 
 function navigate(view) {
   const selected = views[view] ? view : 'overview';
