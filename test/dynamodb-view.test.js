@@ -7,6 +7,7 @@ import {
   orderedFieldNames,
   orderJsonValue,
   PAGE_SIZE,
+  parseEmbeddedJson,
   parseJsonString,
   structuredPreview,
 } from '../public/js/views/dynamodb.js';
@@ -104,6 +105,28 @@ test('parses JSON stored in string attributes for a clean table preview', () => 
   assert.equal(parseJsonString('ordinary string'), null);
   assert.equal(parseJsonString('{invalid json}'), null);
   assert.equal(parseJsonString('42'), null);
+});
+
+test('recursively expands JSON stored in strings for item viewing and copying', () => {
+  assert.deepEqual(
+    parseEmbeddedJson({
+      id: 'item-1',
+      items: '[{"product":"Starter","students":"[{\\"id\\":1}]"}]',
+      label: 'ordinary string',
+    }),
+    {
+      id: 'item-1',
+      items: [{ product: 'Starter', students: [{ id: 1 }] }],
+      label: 'ordinary string',
+    },
+  );
+});
+
+test('copies selected rows from the current page as a JSON array', async () => {
+  const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
+  assert.match(view, /id="bulk-copy"/);
+  assert.match(view, /pageIndices\s*\.filter\(\(index\) => selectedRows\.has\(index\)\)/);
+  assert.match(view, /\.map\(\(index\) => parseEmbeddedJson\(tableData\.items\[index\]\)\)/);
 });
 
 test('keeps one full-height JSON editor for both view and edit modes', async () => {

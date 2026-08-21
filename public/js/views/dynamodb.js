@@ -116,6 +116,17 @@ export function parseJsonString(value) {
   }
 }
 
+export function parseEmbeddedJson(value) {
+  if (Array.isArray(value)) return value.map((entry) => parseEmbeddedJson(entry));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, parseEmbeddedJson(entry)]),
+    );
+  }
+  const parsed = parseJsonString(value);
+  return parsed ? parseEmbeddedJson(parsed) : value;
+}
+
 export function compareDynamoValues(left, right, leftType, rightType, direction = 'asc') {
   const a = sortableValue(left, leftType);
   const b = sortableValue(right, rightType);
@@ -169,8 +180,9 @@ export function orderJsonValue(value, keyNames = []) {
   return Object.fromEntries(fields.map((name) => [name, orderJsonValue(value[name])]));
 }
 
-function editorJson(item, keyNames = []) {
-  return JSON.stringify(orderJsonValue(item, keyNames), null, 2);
+function editorJson(item, keyNames = [], parseStrings = false) {
+  const value = parseStrings ? parseEmbeddedJson(item) : item;
+  return JSON.stringify(orderJsonValue(value, keyNames), null, 2);
 }
 
 async function copyToClipboard(value, label = 'Value') {
@@ -217,7 +229,11 @@ function openEditor(container, tableName, item = {}, schema = {}, mode = 'edit')
   container.querySelector('#editor-title').textContent = editingExistingItem
     ? 'Item details'
     : 'New item';
-  container.querySelector('#item-json').value = editorJson(item, tableData?.keys || []);
+  container.querySelector('#item-json').value = editorJson(
+    item,
+    tableData?.keys || [],
+    mode === 'view',
+  );
   setEditorMode(container, mode);
   container.querySelector('#editor').showModal();
   const editor = container.querySelector('#item-json');
@@ -281,7 +297,7 @@ function renderItems(container, tableName) {
   const pageIndices = visibleIndices.slice(pageStart, pageStart + PAGE_SIZE);
   selectedRows = new Set([...selectedRows].filter((index) => visibleIndices.includes(index)));
   area.innerHTML = `<div class="table-toolbar"><div><span class="eyebrow">TABLE</span><h2>${escapeHtml(tableName)}</h2><p>${tableData.count} item(s) · Key: ${escapeHtml(tableData.keys.join(' + '))}</p></div><div class="table-toolbar-actions"><button class="button secondary" id="refresh-items">↻ Refresh</button><button class="button primary" id="new-item">＋ New item</button></div></div>
-    <div class="item-tools"><div class="item-filter"><span class="search-icon">⌕</span><input id="item-search" type="search" placeholder="Filter items…" value="${escapeHtml(filter.query)}" aria-label="Filter table items"><select id="filter-field" aria-label="Filter field"><option value="">All fields</option>${columns.map((column) => `<option value="${escapeHtml(column)}" ${filter.field === column ? 'selected' : ''}>${escapeHtml(column)}</option>`).join('')}</select>${filter.query ? '<button class="clear-filter" id="clear-filter">Clear</button>' : ''}</div><button class="button danger bulk-delete" id="bulk-delete" ${selectedRows.size ? '' : 'disabled'}>Delete selected <span>${selectedRows.size || ''}</span></button></div>
+    <div class="item-tools"><div class="item-filter"><span class="search-icon">⌕</span><input id="item-search" type="search" placeholder="Filter items…" value="${escapeHtml(filter.query)}" aria-label="Filter table items"><select id="filter-field" aria-label="Filter field"><option value="">All fields</option>${columns.map((column) => `<option value="${escapeHtml(column)}" ${filter.field === column ? 'selected' : ''}>${escapeHtml(column)}</option>`).join('')}</select>${filter.query ? '<button class="clear-filter" id="clear-filter">Clear</button>' : ''}</div><div class="selection-actions"><button class="button secondary bulk-copy" id="bulk-copy" ${pageIndices.some((index) => selectedRows.has(index)) ? '' : 'disabled'}>▣ Copy selected <span>${pageIndices.filter((index) => selectedRows.has(index)).length || ''}</span></button><button class="button danger bulk-delete" id="bulk-delete" ${selectedRows.size ? '' : 'disabled'}>Delete selected <span>${selectedRows.size || ''}</span></button></div></div>
     ${
       tableData.items.length
         ? `<div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all items on this page" ${pageIndices.length && pageIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns
@@ -325,6 +341,12 @@ function renderItems(container, tableName) {
   });
   area.querySelector('#bulk-delete').onclick = () =>
     deleteRows(container, tableName, [...selectedRows]);
+  area.querySelector('#bulk-copy').onclick = () => {
+    const items = pageIndices
+      .filter((index) => selectedRows.has(index))
+      .map((index) => parseEmbeddedJson(tableData.items[index]));
+    copyToClipboard(items, `${items.length} selected item(s)`);
+  };
   area.querySelectorAll('[data-sort]').forEach(
     (button) =>
       (button.onclick = () => {
@@ -489,11 +511,21 @@ export async function renderDynamo(container) {
     const editor = container.querySelector('#editor');
     container.querySelector('#dialog-x').onclick = () => editor.close();
     container.querySelector('#editor-close').onclick = () => editor.close();
-    container.querySelector('#edit-item').onclick = () => setEditorMode(container, 'edit');
+    container.querySelector('#edit-item').onclick = () => {
+      container.querySelector('#item-json').value = editorJson(
+        editingItem,
+        tableData?.keys || [],
+      );
+      setEditorMode(container, 'edit');
+    };
     container.querySelector('#copy-item').onclick = () =>
       copyToClipboard(container.querySelector('#item-json').value, 'Item JSON');
     container.querySelector('#back-to-view').onclick = () => {
-      container.querySelector('#item-json').value = editorJson(editingItem, tableData?.keys || []);
+      container.querySelector('#item-json').value = editorJson(
+        editingItem,
+        tableData?.keys || [],
+        true,
+      );
       setEditorMode(container, 'view');
     };
     container.querySelector('#save-item').onclick = async () => {
