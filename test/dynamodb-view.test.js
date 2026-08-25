@@ -129,6 +129,14 @@ test('copies selected rows from the current page as a JSON array', async () => {
   assert.match(view, /\.map\(\(index\) => parseEmbeddedJson\(tableData\.items\[index\]\)\)/);
 });
 
+test('clears selected DynamoDB rows whenever the item filter changes', async () => {
+  const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
+  assert.match(
+    view,
+    /function updateTableFilter[\s\S]*?state\.itemFilters\[tableName\][\s\S]*?selectedRows\.clear\(\);[\s\S]*?saveState\(\);/,
+  );
+});
+
 test('keeps one full-height JSON editor for both view and edit modes', async () => {
   const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
   const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
