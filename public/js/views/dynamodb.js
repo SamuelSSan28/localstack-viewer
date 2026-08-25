@@ -66,6 +66,7 @@ function tableFilter(tableName) {
 
 function updateTableFilter(tableName, patch) {
   state.itemFilters[tableName] = { ...tableFilter(tableName), ...patch };
+  selectedRows.clear();
   saveState();
 }
 
