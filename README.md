@@ -30,6 +30,9 @@ docker run -d \
 
 Open [http://localhost:8888](http://localhost:8888).
 
+For reproducible environments, replace `latest` with a release tag such as
+`1.0.0`. See the [changelog](CHANGELOG.md) for the contents of each release.
+
 The application writes structured request, startup, and error details to the
 container's standard output. Follow them while troubleshooting with:
 
@@ -87,14 +90,14 @@ Removing the container does not remove LocalStack resources. The viewer only rea
 
 ## Configuration
 
-| Option                | Default                 | Description                                                                                                                                                                                       |
-| --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LOCALSTACK_ENDPOINT` | `http://localhost:4566` | LocalStack URL reachable from the viewer container. When LocalStack runs on the Docker host, use `http://host.docker.internal:4566` together with `--add-host=host.docker.internal:host-gateway`. |
-| `AWS_DEFAULT_REGION`  | `us-east-1`             | Region preselected when creating an S3 bucket. The create dialog lists the regions supported by the S3 provider.                                                                                   |
-| `AWS_ACCESS_KEY_ID`   | `test`                  | Access key used to sign S3 requests. The default matches LocalStack's standard development credentials.                                                                                           |
-| `AWS_SECRET_ACCESS_KEY` | `test`                | Secret key used to sign S3 requests. Set it with the access key when LocalStack authentication is configured.                                                                                      |
-| `PORT`                | `8888`                  | HTTP port inside the container. Usually this does not need to be changed; change the left side of `-p 8888:8888` to use another host port.                                                        |
-| `LOG_LEVEL`           | `info`                  | Container log verbosity: `debug`, `info`, or `error`. Logs are emitted as one JSON object per line for easy filtering.                                                                         |
+| Option                  | Default                 | Description                                                                                                                                                                                       |
+| ----------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOCALSTACK_ENDPOINT`   | `http://localhost:4566` | LocalStack URL reachable from the viewer container. When LocalStack runs on the Docker host, use `http://host.docker.internal:4566` together with `--add-host=host.docker.internal:host-gateway`. |
+| `AWS_DEFAULT_REGION`    | `us-east-1`             | Region preselected when creating an S3 bucket. The create dialog lists the regions supported by the S3 provider.                                                                                  |
+| `AWS_ACCESS_KEY_ID`     | `test`                  | Access key used to sign S3 requests. The default matches LocalStack's standard development credentials.                                                                                           |
+| `AWS_SECRET_ACCESS_KEY` | `test`                  | Secret key used to sign S3 requests. Set it with the access key when LocalStack authentication is configured.                                                                                     |
+| `PORT`                  | `8888`                  | HTTP port inside the container. Usually this does not need to be changed; change the left side of `-p 8888:8888` to use another host port.                                                        |
+| `LOG_LEVEL`             | `info`                  | Container log verbosity: `debug`, `info`, or `error`. Logs are emitted as one JSON object per line for easy filtering.                                                                            |
 
 For example, expose the viewer at port `9090` with `-p 9090:8888`.
 
@@ -102,3 +105,11 @@ For example, expose the viewer at port `9090` with `-p 9090:8888`.
 
 Contributions are welcome. If you would like to suggest an improvement or fix,
 open a pull request with your changes.
+
+## Release process
+
+Releases use semantic version tags. Update the version in `package.json` and
+`package-lock.json`, add the release notes to `CHANGELOG.md`, and merge those
+changes before pushing the matching tag (for example, `v1.0.0`). The tag runs
+the test suite, creates the GitHub release, and publishes versioned Docker
+images through the repository workflows.

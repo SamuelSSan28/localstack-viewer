@@ -195,9 +195,9 @@ test('copies the complete value represented by one cell', () => {
   assert.equal(clipboardValue({ nested: ['value'] }), '{\n  "nested": [\n    "value"\n  ]\n}');
 });
 
-test('declares the star favicon', async () => {
+test('declares the packaged favicon', async () => {
   const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
-  const favicon = await readFile(new URL('../public/favicon.svg', import.meta.url), 'utf8');
-  assert.match(html, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml" \/>/);
-  assert.match(favicon, /fill="#facc15"/);
+  const favicon = await readFile(new URL('../public/favicon.ico', import.meta.url));
+  assert.match(html, /<link rel="icon" href="\/favicon\.ico" sizes="any" \/>/);
+  assert.ok(favicon.length > 0);
 });
