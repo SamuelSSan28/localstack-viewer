@@ -397,6 +397,7 @@ h3 {
 .dynamo-layout {
   display: grid;
   grid-template-columns: 273px minmax(0, 1fr);
+  height: calc(100dvh - 176px);
   min-height: 570px;
   overflow: hidden;
   border: 1px solid #e2e7ee;
@@ -404,12 +405,22 @@ h3 {
   background: #fff;
 }
 .table-list {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
   padding: 15px 11px;
   border-right: 1px solid #e8ecf2;
   background: #fafbfc;
 }
 .table-list > label {
   margin-top: 7px;
+}
+#table-options {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #45516a transparent;
+  scrollbar-width: thin;
 }
 .table-search,
 .item-filter {
@@ -1851,6 +1862,12 @@ textarea,
   .resource-layout,
   .topic-columns {
     grid-template-columns: 1fr;
+  }
+  .dynamo-layout {
+    height: auto;
+  }
+  #table-options {
+    max-height: 40dvh;
   }
   .table-list,
   .mail-list,

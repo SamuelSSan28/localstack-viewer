@@ -21,6 +21,16 @@ test('limits DynamoDB table pages to ten rows', async () => {
   assert.match(css, /\.table-scroll \{\s+max-width: 100%;\s+overflow: auto;/);
 });
 
+test('keeps the DynamoDB tables list independently scrollable within the viewport', async () => {
+  const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.dynamo-layout \{[^}]*height: calc\(100dvh - 176px\);/);
+  assert.match(css, /\.table-list \{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex-direction: column;/);
+  assert.match(
+    css,
+    /#table-options \{[^}]*min-height: 0;[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;/,
+  );
+});
+
 test('places DynamoDB keys first and sorts remaining fields alphabetically', () => {
   const items = [
     { zebra: 1, sortKey: 2 },
