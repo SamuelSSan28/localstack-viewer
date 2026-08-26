@@ -1,0 +1,87 @@
+name: Relatar um bug
+description: Informe um comportamento inesperado ou um erro reproduzível.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por ajudar a melhorar o LocalStack Viewer. Antes de enviar,
+        pesquise nas issues existentes para evitar relatos duplicados.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrição do bug
+      description: Explique claramente o que aconteceu e o que você esperava que acontecesse.
+      placeholder: Ao acessar ..., aconteceu ...; eu esperava ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Passos para reproduzir
+      description: Liste os passos mínimos que permitem reproduzir o problema.
+      placeholder: |
+        1. Inicie o projeto com ...
+        2. Acesse ...
+        3. Clique em ...
+        4. Observe o erro ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs ou capturas de tela
+      description: Cole logs relevantes ou arraste capturas de tela aqui. Remova dados sensíveis antes de enviar.
+
+  - type: input
+    id: version
+    attributes:
+      label: Versão do LocalStack Viewer
+      description: Informe a versão, tag ou hash do commit utilizado.
+      placeholder: v1.0.0 ou abc1234
+    validations:
+      required: true
+
+  - type: input
+    id: localstack-version
+    attributes:
+      label: Versão do LocalStack
+      placeholder: 4.0.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Forma de execução
+      options:
+        - Docker Compose
+        - Imagem Docker
+        - Node.js local
+        - Outra
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Ambiente
+      description: Informe o sistema operacional, navegador e suas versões.
+      placeholder: Ubuntu 24.04, Chrome 130
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Verificações
+      options:
+        - label: Pesquisei nas issues abertas e não encontrei um relato igual.
+          required: true
+        - label: Removi senhas, chaves, tokens e outros dados sensíveis do relato.
+          required: true

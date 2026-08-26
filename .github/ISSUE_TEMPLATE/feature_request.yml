@@ -1,0 +1,51 @@
+name: Sugerir uma funcionalidade
+description: Proponha uma melhoria ou uma nova capacidade para o projeto.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado pela sugestão. Descreva primeiro o problema a ser resolvido;
+        isso ajuda a avaliar alternativas além da solução proposta.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema ou necessidade
+      description: Qual problema, limitação ou caso de uso motivou esta solicitação?
+      placeholder: Atualmente é difícil ... porque ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Solução proposta
+      description: Explique como você gostaria que a funcionalidade se comportasse.
+      placeholder: Seria útil se o LocalStack Viewer pudesse ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+      description: Descreva soluções alternativas ou contornos que você já avaliou.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto adicional
+      description: Adicione exemplos, esboços, links ou qualquer informação que ajude a entender a proposta.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Verificações
+      options:
+        - label: Pesquisei nas issues abertas e não encontrei uma solicitação igual.
+          required: true
+        - label: Esta solicitação descreve uma única funcionalidade ou melhoria.
+          required: true
