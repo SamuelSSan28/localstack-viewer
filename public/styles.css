@@ -394,11 +394,20 @@ h3 {
   color: #8d97a9;
   font-size: 11px;
 }
+.dynamo-page {
+  display: flex;
+  height: calc(100dvh - 99px);
+  min-height: 0;
+  flex-direction: column;
+}
+.dynamo-page > .page-head {
+  flex: 0 0 auto;
+}
 .dynamo-layout {
   display: grid;
+  flex: 1 1 0;
   grid-template-columns: 273px minmax(0, 1fr);
-  height: calc(100dvh - 176px);
-  min-height: 570px;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid #e2e7ee;
   border-radius: 13px;
@@ -416,6 +425,7 @@ h3 {
   margin-top: 7px;
 }
 #table-options {
+  flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -1864,6 +1874,9 @@ textarea,
     grid-template-columns: 1fr;
   }
   .dynamo-layout {
+    height: auto;
+  }
+  .dynamo-page {
     height: auto;
   }
   #table-options {

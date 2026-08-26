@@ -22,12 +22,18 @@ test('limits DynamoDB table pages to ten rows', async () => {
 });
 
 test('keeps the DynamoDB tables list independently scrollable within the viewport', async () => {
+  const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
   const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
-  assert.match(css, /\.dynamo-layout \{[^}]*height: calc\(100dvh - 176px\);/);
+  assert.match(view, /class="dynamo-page"/);
+  assert.match(
+    css,
+    /\.dynamo-page \{[^}]*display: flex;[^}]*height: calc\(100dvh - 99px\);[^}]*min-height: 0;[^}]*flex-direction: column;/,
+  );
+  assert.match(css, /\.dynamo-layout \{[^}]*flex: 1 1 0;[^}]*min-height: 0;/);
   assert.match(css, /\.table-list \{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex-direction: column;/);
   assert.match(
     css,
-    /#table-options \{[^}]*min-height: 0;[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;/,
+    /#table-options \{[^}]*flex: 1 1 0;[^}]*min-height: 0;[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;/,
   );
 });
 
