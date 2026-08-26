@@ -301,7 +301,7 @@ function renderItems(container, tableName) {
     <div class="item-tools"><div class="item-filter"><span class="search-icon">⌕</span><input id="item-search" type="search" placeholder="Filter items…" value="${escapeHtml(filter.query)}" aria-label="Filter table items"><select id="filter-field" aria-label="Filter field"><option value="">All fields</option>${columns.map((column) => `<option value="${escapeHtml(column)}" ${filter.field === column ? 'selected' : ''}>${escapeHtml(column)}</option>`).join('')}</select>${filter.query ? '<button class="clear-filter" id="clear-filter">Clear</button>' : ''}</div><div class="selection-actions"><button class="button secondary bulk-copy" id="bulk-copy" ${pageIndices.some((index) => selectedRows.has(index)) ? '' : 'disabled'}>▣ Copy selected <span>${pageIndices.filter((index) => selectedRows.has(index)).length || ''}</span></button><button class="button danger bulk-delete" id="bulk-delete" ${selectedRows.size ? '' : 'disabled'}>Delete selected <span>${selectedRows.size || ''}</span></button></div></div>
     ${
       tableData.items.length
-        ? `<div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all items on this page" ${pageIndices.length && pageIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns
+        ? `<div class="table-results"><div class="table-scroll"><table><thead><tr><th class="select-cell"><input type="checkbox" id="select-all" aria-label="Select all items on this page" ${pageIndices.length && pageIndices.every((index) => selectedRows.has(index)) ? 'checked' : ''}></th>${columns
             .map((column) => {
               const isKey = tableData.keys.includes(column);
               const isPinned = pinnedFields.includes(column);
@@ -314,7 +314,7 @@ function renderItems(container, tableName) {
             })
             .join(
               '',
-            )}</tbody></table></div>${visibleIndices.length ? `<nav class="table-pagination" aria-label="Table pagination"><span>${pageStart + 1}–${Math.min(pageStart + PAGE_SIZE, visibleIndices.length)} of ${visibleIndices.length}</span><div><button class="button secondary" id="previous-page" ${currentPage === 1 ? 'disabled' : ''} aria-label="Previous page">‹ Previous</button><span>Page ${currentPage} of ${totalPages}</span><button class="button secondary" id="next-page" ${currentPage === totalPages ? 'disabled' : ''} aria-label="Next page">Next ›</button></div></nav>` : '<div class="filter-empty"><b>No matching items</b><span>Try another field or search term.</span></div>'}`
+            )}</tbody></table></div>${visibleIndices.length ? `<nav class="table-pagination" aria-label="Table pagination"><span>${pageStart + 1}–${Math.min(pageStart + PAGE_SIZE, visibleIndices.length)} of ${visibleIndices.length}</span><div><button class="button secondary" id="previous-page" ${currentPage === 1 ? 'disabled' : ''} aria-label="Previous page">‹ Previous</button><span>Page ${currentPage} of ${totalPages}</span><button class="button secondary" id="next-page" ${currentPage === totalPages ? 'disabled' : ''} aria-label="Next page">Next ›</button></div></nav>` : '<div class="filter-empty"><b>No matching items</b><span>Try another field or search term.</span></div>'}</div>`
         : '<div class="empty"><b>Empty table</b><span>Add the first item to get started.</span></div>'
     }`;
 

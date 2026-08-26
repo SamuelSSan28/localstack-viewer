@@ -18,19 +18,27 @@ test('limits DynamoDB table pages to ten rows', async () => {
   assert.equal(PAGE_SIZE, 10);
   assert.match(view, /visibleIndices\.slice\(pageStart, pageStart \+ PAGE_SIZE\)/);
   assert.match(view, /class="table-pagination"/);
-  assert.match(css, /\.table-scroll \{\s+max-width: 100%;\s+overflow: auto;/);
+  assert.match(css, /\.table-scroll \{[^}]*max-width: 100%;[^}]*overflow: auto;/);
 });
 
 test('keeps the DynamoDB tables list independently scrollable within the viewport', async () => {
   const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
   const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
   assert.match(view, /class="dynamo-page"/);
+  assert.match(view, /class="table-results"/);
   assert.match(
     css,
     /\.dynamo-page \{[^}]*display: flex;[^}]*height: calc\(100dvh - 99px\);[^}]*min-height: 0;[^}]*flex-direction: column;/,
   );
   assert.match(css, /\.dynamo-layout \{[^}]*flex: 1 1 0;[^}]*min-height: 0;/);
   assert.match(css, /\.table-list \{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex-direction: column;/);
+  assert.match(
+    css,
+    /#table-content \{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex-direction: column;[^}]*overflow: hidden;[^}]*overscroll-behavior: contain;/,
+  );
+  assert.match(css, /\.table-results \{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex: 1 1 0;[^}]*flex-direction: column;/);
+  assert.match(css, /\.table-scroll \{[^}]*min-height: 0;[^}]*flex: 1 1 auto;[^}]*overflow: auto;/);
+  assert.match(css, /\.table-pagination \{[^}]*display: flex;[^}]*flex: 0 0 auto;/);
   assert.match(
     css,
     /#table-options \{[^}]*flex: 1 1 0;[^}]*min-height: 0;[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;/,
