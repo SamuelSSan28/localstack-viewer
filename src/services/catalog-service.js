@@ -1,4 +1,4 @@
-import { dynamoRequest, localstack, localstackRequest, xmlValues } from '../lib/localstack.js';
+import { dynamoRequest, eventBridgeRequest, localstack, localstackRequest, xmlValues } from '../lib/localstack.js';
 
 const definitions = [
   ['s3', 'S3 Buckets', async () => xmlValues(await (await localstackRequest('/')).text(), 'Name')],
@@ -28,6 +28,11 @@ const definitions = [
         await (await localstackRequest('/?Action=ListTopics&Version=2010-03-31')).text(),
         'TopicArn',
       ),
+  ],
+  [
+    'eventbridge',
+    'EventBridge Buses',
+    async () => (await eventBridgeRequest('ListEventBuses')).EventBuses || [],
   ],
   [
     'ses',

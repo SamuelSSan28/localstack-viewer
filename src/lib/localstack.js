@@ -94,6 +94,19 @@ export async function dynamoRequest(action, payload = {}) {
   ).json();
 }
 
+export async function eventBridgeRequest(action, payload = {}) {
+  return (
+    await localstackRequest('/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-amz-json-1.1',
+        'X-Amz-Target': `AWSEvents.${action}`,
+      },
+      body: JSON.stringify(payload),
+    })
+  ).json();
+}
+
 export const xmlValues = (xml, tag) =>
   [...xml.matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>(.*?)</${tag}>`, 'gs'))].map((match) =>
     match[1]

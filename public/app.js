@@ -1,5 +1,6 @@
 import { renderDynamo } from './js/views/dynamodb.js';
 import { renderEmails } from './js/views/emails.js';
+import { renderEventBridge } from './js/views/eventbridge.js';
 import { renderOverview } from './js/views/overview.js';
 import { renderSqs } from './js/views/sqs.js';
 import { renderSns } from './js/views/sns.js';
@@ -13,6 +14,7 @@ const views = {
   sqs: renderSqs,
   sns: renderSns,
   emails: renderEmails,
+  eventbridge: renderEventBridge,
 };
 const container = document.querySelector('#view');
 initializeSelects();
