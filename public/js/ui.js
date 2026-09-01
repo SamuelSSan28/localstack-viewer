@@ -18,18 +18,27 @@ export function showLoading(container, message = 'Loading…') {
 
 const serviceLabels = {
   events: 'EventBridge',
+  eventbridge: 'EventBridge',
   dynamodb: 'DynamoDB',
   s3: 'S3',
+  simpleemailservice: 'SES',
   ses: 'SES',
+  simplenotificationservice: 'SNS',
   sns: 'SNS',
+  simplequeueservice: 'SQS',
   sqs: 'SQS',
 };
+
+function serviceLabel(service) {
+  const key = service.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return serviceLabels[key] || service;
+}
 
 export function errorPresentation(error) {
   const detail = error?.message || 'An unexpected error occurred.';
   const disabledService = detail.match(/Service ['"]([^'"]+)['"] is not enabled/i)?.[1];
   if (disabledService) {
-    const service = serviceLabels[disabledService.toLowerCase()] || disabledService;
+    const service = serviceLabel(disabledService);
     return {
       eyebrow: 'SERVICE UNAVAILABLE',
       title: `${service} is not enabled`,
@@ -56,7 +65,10 @@ export function errorPresentation(error) {
 
 export function showError(container, error, retry) {
   const state = errorPresentation(error);
-  container.innerHTML = `<div class="state error-state" role="alert">
+  // Loading failures use one application-level surface, even when they originate
+  // from a nested resource panel. This keeps every service failure consistent.
+  const surface = document.querySelector('#view') || container;
+  surface.innerHTML = `<div class="state error-state" role="alert">
     <div class="error-icon" aria-hidden="true">!</div>
     <span class="eyebrow">${escapeHtml(state.eyebrow)}</span>
     <h2>${escapeHtml(state.title)}</h2>
@@ -65,7 +77,7 @@ export function showError(container, error, retry) {
     <button type="button" class="button primary error-retry">↻ Try again</button>
     <details class="error-details"><summary>Technical details</summary><code>${escapeHtml(state.detail)}</code></details>
   </div>`;
-  container.querySelector('.error-retry').onclick =
+  surface.querySelector('.error-retry').onclick =
     retry || (() => document.querySelector('.nav-item.active')?.click());
 }
 
