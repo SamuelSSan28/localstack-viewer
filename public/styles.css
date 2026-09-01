@@ -1422,6 +1422,40 @@ textarea {
   outline-color: #684bd9;
   font-size: 11px;
 }
+
+.eventbridge-rule > p {
+  margin: 12px 0;
+  color: #687388;
+  font-size: 13px;
+}
+.eventbridge-targets {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.eventbridge-target {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #e5e9ef;
+  border-radius: 8px;
+  background: #fafbfc;
+}
+.eventbridge-target > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.eventbridge-target code {
+  overflow: hidden;
+  color: #687388;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .sqs-send-dialog textarea {
   min-height: 150px;
 }

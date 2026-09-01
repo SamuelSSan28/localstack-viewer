@@ -35,6 +35,14 @@ export const api = {
       method: 'DELETE',
       body: JSON.stringify({ messageId, receiptHandle }),
     }),
+  eventBuses: () => request('/api/eventbridge/buses'),
+  eventBridgeRules: (eventBusName) =>
+    request(`/api/eventbridge/rules?eventBusName=${encodeURIComponent(eventBusName)}`),
+  putEvent: (eventBusName, event) =>
+    request('/api/eventbridge/events', {
+      method: 'POST',
+      body: JSON.stringify({ eventBusName, ...event }),
+    }),
   topics: () => request('/api/sns/topics'),
   topic: (topicArn) => request(`/api/sns/topic?topicArn=${encodeURIComponent(topicArn)}`),
   publish: (topicArn, message, subject) =>
