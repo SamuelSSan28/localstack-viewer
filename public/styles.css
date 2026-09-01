@@ -940,8 +940,75 @@ td code {
 .state {
   min-height: 70vh;
 }
-.error-state b {
-  color: #c35b5b;
+.error-state {
+  width: min(620px, calc(100% - 40px));
+  margin: 0 auto;
+  color: #647087;
+}
+.error-state .error-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 9px;
+  place-items: center;
+  border: 1px solid #f1c9c6;
+  border-radius: 14px;
+  color: #c04c4c;
+  background: #fff1f0;
+  font: 700 24px/1 'Manrope', sans-serif;
+  box-shadow: 0 8px 24px #b94e4514;
+}
+.error-state h2 {
+  margin: 0;
+  color: #17233c;
+  font: 700 22px/1.3 'Manrope', sans-serif;
+}
+.error-state p {
+  max-width: 520px;
+  margin: 2px 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.error-hint {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 4px 0 12px;
+  padding: 10px 13px;
+  border: 1px solid #ded9f5;
+  border-radius: 8px;
+  color: #53458d;
+  background: #f5f2ff;
+}
+.error-hint code {
+  font-size: 11px;
+}
+.error-retry {
+  margin-top: 3px;
+}
+.error-details {
+  width: min(520px, 100%);
+  margin-top: 13px;
+  color: #778196;
+  text-align: left;
+}
+.error-details summary {
+  cursor: pointer;
+  font-size: 11px;
+  text-align: center;
+}
+.error-details code {
+  display: block;
+  max-height: 120px;
+  margin-top: 8px;
+  padding: 10px;
+  overflow: auto;
+  border-radius: 7px;
+  color: #875656;
+  background: #fff4f3;
+  font-size: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .spinner {
   width: 24px;
