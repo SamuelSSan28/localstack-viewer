@@ -16,8 +16,57 @@ export function showLoading(container, message = 'Loading…') {
   container.innerHTML = `<div class="state"><span class="spinner"></span>${escapeHtml(message)}</div>`;
 }
 
-export function showError(container, error) {
-  container.innerHTML = `<div class="state error-state"><b>Unable to load</b><span>${escapeHtml(error.message)}</span></div>`;
+const serviceLabels = {
+  events: 'EventBridge',
+  dynamodb: 'DynamoDB',
+  s3: 'S3',
+  ses: 'SES',
+  sns: 'SNS',
+  sqs: 'SQS',
+};
+
+export function errorPresentation(error) {
+  const detail = error?.message || 'An unexpected error occurred.';
+  const disabledService = detail.match(/Service ['"]([^'"]+)['"] is not enabled/i)?.[1];
+  if (disabledService) {
+    const service = serviceLabels[disabledService.toLowerCase()] || disabledService;
+    return {
+      eyebrow: 'SERVICE UNAVAILABLE',
+      title: `${service} is not enabled`,
+      message: `LocalStack is running, but the ${service} service is disabled. Enable it and restart LocalStack to use this page.`,
+      hint: `Add ${disabledService} to your SERVICES configuration.`,
+      detail,
+    };
+  }
+  if (/fetch|ECONNREFUSED|LocalStack HTTP 5\d\d/i.test(detail)) {
+    return {
+      eyebrow: 'CONNECTION ISSUE',
+      title: 'LocalStack is unavailable',
+      message: 'We could not reach this service. Check that LocalStack is running and try again.',
+      detail,
+    };
+  }
+  return {
+    eyebrow: 'SOMETHING WENT WRONG',
+    title: 'Unable to load this page',
+    message: 'The request could not be completed. Try again or review the technical details below.',
+    detail,
+  };
+}
+
+export function showError(container, error, retry) {
+  const state = errorPresentation(error);
+  container.innerHTML = `<div class="state error-state" role="alert">
+    <div class="error-icon" aria-hidden="true">!</div>
+    <span class="eyebrow">${escapeHtml(state.eyebrow)}</span>
+    <h2>${escapeHtml(state.title)}</h2>
+    <p>${escapeHtml(state.message)}</p>
+    ${state.hint ? `<div class="error-hint"><span aria-hidden="true">⚙</span><code>${escapeHtml(state.hint)}</code></div>` : ''}
+    <button type="button" class="button primary error-retry">↻ Try again</button>
+    <details class="error-details"><summary>Technical details</summary><code>${escapeHtml(state.detail)}</code></details>
+  </div>`;
+  container.querySelector('.error-retry').onclick =
+    retry || (() => document.querySelector('.nav-item.active')?.click());
 }
 
 function enhanceSelect(select) {
