@@ -12,7 +12,22 @@ let editingItem = {};
 let editingExistingItem = false;
 let loadGeneration = 0;
 let selectedRows = new Set();
-let state = readState();
+let state;
+let autoRefreshTimer;
+let autoRefreshCountdownTimer;
+let nextAutoRefreshAt = 0;
+
+export const AUTO_REFRESH_INTERVALS = [1, 2, 5, 10, 15, 30];
+
+export function normalizeAutoRefresh(value) {
+  const enabled = value?.enabled === true;
+  const intervalMinutes = AUTO_REFRESH_INTERVALS.includes(Number(value?.intervalMinutes))
+    ? Number(value.intervalMinutes)
+    : 2;
+  return { enabled, intervalMinutes };
+}
+
+state = readState();
 
 const typeNames = {
   S: 'String',
@@ -38,6 +53,7 @@ function readState() {
       itemSorts: saved.itemSorts && typeof saved.itemSorts === 'object' ? saved.itemSorts : {},
       pinnedFields:
         saved.pinnedFields && typeof saved.pinnedFields === 'object' ? saved.pinnedFields : {},
+      autoRefresh: normalizeAutoRefresh(saved.autoRefresh),
     };
   } catch {
     return {
@@ -47,8 +63,44 @@ function readState() {
       itemFilters: {},
       itemSorts: {},
       pinnedFields: {},
+      autoRefresh: normalizeAutoRefresh(),
     };
   }
+}
+
+function stopAutoRefresh() {
+  clearTimeout(autoRefreshTimer);
+  clearInterval(autoRefreshCountdownTimer);
+  autoRefreshTimer = undefined;
+  autoRefreshCountdownTimer = undefined;
+  nextAutoRefreshAt = 0;
+}
+
+function updateAutoRefreshStatus(container) {
+  const status = container.querySelector('#auto-refresh-status');
+  if (!status) return;
+  if (!state.autoRefresh.enabled) {
+    status.hidden = true;
+    return;
+  }
+  const seconds = Math.max(0, Math.ceil((nextAutoRefreshAt - Date.now()) / 1000));
+  const minutes = Math.floor(seconds / 60);
+  const remainder = String(seconds % 60).padStart(2, '0');
+  status.hidden = false;
+  status.innerHTML = `<span></span>Auto-refresh in ${minutes}:${remainder}`;
+}
+
+function scheduleAutoRefresh(container) {
+  stopAutoRefresh();
+  if (!state.autoRefresh.enabled || !currentTable || !container.isConnected) return;
+  const delay = state.autoRefresh.intervalMinutes * 60 * 1000;
+  nextAutoRefreshAt = Date.now() + delay;
+  updateAutoRefreshStatus(container);
+  autoRefreshCountdownTimer = setInterval(() => updateAutoRefreshStatus(container), 1000);
+  autoRefreshTimer = setTimeout(async () => {
+    if (!container.isConnected || location.hash !== '#dynamodb') return stopAutoRefresh();
+    await loadItems(container, currentTable, { quiet: true, preserveView: true });
+  }, delay);
 }
 
 function saveState() {
@@ -433,22 +485,31 @@ function renderItems(container, tableName) {
     );
 }
 
-async function loadItems(container, tableName) {
+async function loadItems(container, tableName, { quiet = false, preserveView = false } = {}) {
   const generation = ++loadGeneration;
   currentTable = tableName;
   state.selectedTable = tableName;
   saveState();
-  selectedRows.clear();
-  currentPage = 1;
+  if (!preserveView) {
+    selectedRows.clear();
+    currentPage = 1;
+  }
   const area = container.querySelector('#table-content');
-  showLoading(area, `Reading ${tableName}…`);
+  if (!quiet) showLoading(area, `Reading ${tableName}…`);
   try {
     const data = await api.table(tableName);
     if (generation !== loadGeneration || currentTable !== tableName) return;
     tableData = data;
     renderItems(container, tableName);
+    scheduleAutoRefresh(container);
+    if (quiet) setStatus(`${tableName} updated automatically`);
   } catch (error) {
-    if (generation === loadGeneration && currentTable === tableName) showError(area, error);
+    if (generation === loadGeneration && currentTable === tableName) {
+      if (quiet) {
+        setStatus(`Auto-refresh failed: ${error.message}`, 'error');
+        scheduleAutoRefresh(container);
+      } else showError(area, error);
+    }
   }
 }
 
@@ -493,6 +554,7 @@ function renderTableList(container, tables) {
 }
 
 export async function renderDynamo(container) {
+  stopAutoRefresh();
   loadGeneration += 1;
   state = readState();
   showLoading(container, 'Listing tables…');
@@ -501,7 +563,8 @@ export async function renderDynamo(container) {
     currentTable = tables.includes(state.selectedTable)
       ? state.selectedTable
       : sortedTables(tables)[0] || '';
-    container.innerHTML = `<div class="dynamo-page"><div class="page-head"><div><span class="eyebrow">DATABASE</span><h1>DynamoDB</h1><p>Inspect and manage items in a dedicated workspace for each table.</p></div></div><section class="dynamo-layout"><aside class="table-list"><label>TABLES</label><div class="table-search"><span>⌕</span><input id="table-search" type="search" placeholder="Search tables…" value="${escapeHtml(state.tableSearch)}" aria-label="Search tables"></div><div id="table-options"></div></aside><div id="table-content"><div class="empty"><b>Select a table</b></div></div></section></div>
+    container.innerHTML = `<div class="dynamo-page"><div class="page-head"><div><span class="eyebrow">DATABASE</span><h1>DynamoDB</h1><p>Inspect and manage items in a dedicated workspace for each table.</p></div><div class="dynamo-page-actions"><div class="auto-refresh-status" id="auto-refresh-status" hidden aria-live="polite"></div><button class="button secondary settings-button" id="open-refresh-settings" aria-haspopup="dialog"><span aria-hidden="true">⚙</span> Auto-refresh</button></div></div><section class="dynamo-layout"><aside class="table-list"><label>TABLES</label><div class="table-search"><span>⌕</span><input id="table-search" type="search" placeholder="Search tables…" value="${escapeHtml(state.tableSearch)}" aria-label="Search tables"></div><div id="table-options"></div></aside><div id="table-content"><div class="empty"><b>Select a table</b></div></div></section></div>
+      <dialog id="refresh-settings" class="settings-dialog"><div class="dialog-head"><div><span class="eyebrow">DYNAMODB SETTINGS</span><h2>Auto-refresh tables</h2><p>Keep the selected table up to date while this page is open.</p></div><button class="icon-button dialog-x" id="refresh-settings-x" aria-label="Close">×</button></div><form id="refresh-settings-form"><label class="toggle-setting" for="auto-refresh-enabled"><span><b>Enable auto-refresh</b><small>Refreshes the active table without interrupting your view.</small></span><input type="checkbox" id="auto-refresh-enabled" ${state.autoRefresh.enabled ? 'checked' : ''}><span class="toggle-control" aria-hidden="true"></span></label><label class="interval-setting" for="auto-refresh-interval"><span>Refresh frequency</span><select id="auto-refresh-interval" aria-label="Auto-refresh frequency">${AUTO_REFRESH_INTERVALS.map((minutes) => `<option value="${minutes}" ${state.autoRefresh.intervalMinutes === minutes ? 'selected' : ''}>Every ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}</option>`).join('')}</select></label><div class="settings-note"><span aria-hidden="true">ⓘ</span><p>This preference applies to all DynamoDB tables and is saved in this browser.</p></div><div class="dialog-actions"><button type="button" class="button secondary" id="refresh-settings-cancel">Cancel</button><button type="submit" class="button primary">Save settings</button></div></form></dialog>
       <dialog id="editor"><div class="dialog-head"><div><span class="eyebrow">DYNAMODB</span><h2 id="editor-title">Item details</h2></div><button class="icon-button dialog-x" id="dialog-x" aria-label="Close">×</button></div><div class="json-editor-head"><label for="item-json">JSON item</label><div class="editor-tools"><button class="button secondary" id="copy-item">▣ Copy all</button><button class="button secondary" id="edit-item">✎ Edit</button></div></div><textarea id="item-json" class="item-json-editor" spellcheck="false" readonly></textarea><p class="hint" id="editor-hint">JSON values are automatically converted to DynamoDB types.</p><div class="dialog-actions"><button class="button secondary" id="back-to-view" hidden>Back to view</button><button class="button secondary" id="editor-close">Close</button><button class="button primary" id="save-item" hidden>Save item</button></div></dialog>`;
     renderTableList(container, tables);
     container.querySelector('#table-search').oninput = (event) => {
@@ -510,13 +573,37 @@ export async function renderDynamo(container) {
       renderTableList(container, tables);
     };
     const editor = container.querySelector('#editor');
+    const refreshSettings = container.querySelector('#refresh-settings');
+    const enabledInput = container.querySelector('#auto-refresh-enabled');
+    const intervalInput = container.querySelector('#auto-refresh-interval');
+    const syncIntervalState = () => {
+      intervalInput.disabled = !enabledInput.checked;
+      intervalInput.dispatchEvent(new Event('change'));
+    };
+    syncIntervalState();
+    enabledInput.onchange = syncIntervalState;
+    container.querySelector('#open-refresh-settings').onclick = () => refreshSettings.showModal();
+    container.querySelector('#refresh-settings-x').onclick = () => refreshSettings.close();
+    container.querySelector('#refresh-settings-cancel').onclick = () => refreshSettings.close();
+    container.querySelector('#refresh-settings-form').onsubmit = (event) => {
+      event.preventDefault();
+      state.autoRefresh = normalizeAutoRefresh({
+        enabled: enabledInput.checked,
+        intervalMinutes: intervalInput.value,
+      });
+      saveState();
+      refreshSettings.close();
+      scheduleAutoRefresh(container);
+      setStatus(
+        state.autoRefresh.enabled
+          ? `Auto-refresh set to every ${state.autoRefresh.intervalMinutes} min`
+          : 'Auto-refresh turned off',
+      );
+    };
     container.querySelector('#dialog-x').onclick = () => editor.close();
     container.querySelector('#editor-close').onclick = () => editor.close();
     container.querySelector('#edit-item').onclick = () => {
-      container.querySelector('#item-json').value = editorJson(
-        editingItem,
-        tableData?.keys || [],
-      );
+      container.querySelector('#item-json').value = editorJson(editingItem, tableData?.keys || []);
       setEditorMode(container, 'edit');
     };
     container.querySelector('#copy-item').onclick = () =>

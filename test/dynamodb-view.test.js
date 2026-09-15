@@ -2,15 +2,42 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
+  AUTO_REFRESH_INTERVALS,
   clipboardValue,
   compareDynamoValues,
   orderedFieldNames,
   orderJsonValue,
   PAGE_SIZE,
+  normalizeAutoRefresh,
   parseEmbeddedJson,
   parseJsonString,
   structuredPreview,
 } from '../public/js/views/dynamodb.js';
+
+test('normalizes the global DynamoDB auto-refresh preference', () => {
+  assert.deepEqual(normalizeAutoRefresh(), { enabled: false, intervalMinutes: 2 });
+  assert.deepEqual(normalizeAutoRefresh({ enabled: true, intervalMinutes: '5' }), {
+    enabled: true,
+    intervalMinutes: 5,
+  });
+  assert.deepEqual(normalizeAutoRefresh({ enabled: 'yes', intervalMinutes: 99 }), {
+    enabled: false,
+    intervalMinutes: 2,
+  });
+  assert.deepEqual(AUTO_REFRESH_INTERVALS, [1, 2, 5, 10, 15, 30]);
+});
+
+test('offers a global, persistent auto-refresh control for DynamoDB tables', async () => {
+  const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
+  assert.match(view, /id="open-refresh-settings"/);
+  assert.match(view, /id="refresh-settings" class="settings-dialog"/);
+  assert.match(view, /id="auto-refresh-enabled"/);
+  assert.match(view, /state\.autoRefresh = normalizeAutoRefresh/);
+  assert.match(view, /loadItems\(container, currentTable, \{ quiet: true, preserveView: true \}\)/);
+  assert.match(css, /\.toggle-setting input:checked \+ \.toggle-control/);
+  assert.match(css, /\.auto-refresh-status/);
+});
 
 test('limits DynamoDB table pages to ten rows', async () => {
   const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
@@ -31,12 +58,18 @@ test('keeps the DynamoDB tables list independently scrollable within the viewpor
     /\.dynamo-page \{[^}]*display: flex;[^}]*height: calc\(100dvh - 99px\);[^}]*min-height: 0;[^}]*flex-direction: column;/,
   );
   assert.match(css, /\.dynamo-layout \{[^}]*flex: 1 1 0;[^}]*min-height: 0;/);
-  assert.match(css, /\.table-list \{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex-direction: column;/);
+  assert.match(
+    css,
+    /\.table-list \{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex-direction: column;/,
+  );
   assert.match(
     css,
     /#table-content \{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex-direction: column;[^}]*overflow: hidden;[^}]*overscroll-behavior: contain;/,
   );
-  assert.match(css, /\.table-results \{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex: 1 1 0;[^}]*flex-direction: column;/);
+  assert.match(
+    css,
+    /\.table-results \{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex: 1 1 0;[^}]*flex-direction: column;/,
+  );
   assert.match(css, /\.table-scroll \{[^}]*min-height: 0;[^}]*flex: 1 1 auto;[^}]*overflow: auto;/);
   assert.match(css, /\.table-pagination \{[^}]*display: flex;[^}]*flex: 0 0 auto;/);
   assert.match(
