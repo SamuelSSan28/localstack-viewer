@@ -78,6 +78,19 @@ test('keeps the DynamoDB tables list independently scrollable within the viewpor
   );
 });
 
+test('opens DynamoDB tables in persistent, closable tabs', async () => {
+  const view = await readFile(new URL('../public/js/views/dynamodb.js', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
+  assert.match(view, /openTables: Array\.isArray\(saved\.openTables\)/);
+  assert.match(view, /id="table-tabs" role="tablist"/);
+  assert.match(view, /role="tab" aria-selected=/);
+  assert.match(view, /data-close-tab=/);
+  assert.match(view, /function selectTable\(container, tables, tableName\)/);
+  assert.match(view, /state\.openTables = state\.openTables\.filter/);
+  assert.match(css, /\.table-tabs \{[^}]*display: flex;[^}]*overflow-x: auto;/);
+  assert.match(css, /\.table-tab\.active/);
+});
+
 test('places DynamoDB keys first and sorts remaining fields alphabetically', () => {
   const items = [
     { zebra: 1, sortKey: 2 },

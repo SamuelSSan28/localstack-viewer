@@ -552,9 +552,92 @@ h3 {
   min-width: 0;
   min-height: 0;
   flex-direction: column;
+  flex: 1 1 0;
   padding: 25px;
   overflow: hidden;
   overscroll-behavior: contain;
+}
+.table-workspace {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+.table-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 45px;
+  gap: 3px;
+  padding: 7px 10px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid #e8ecf2;
+  background: #f8f9fb;
+  scrollbar-color: #c2c8d3 transparent;
+  scrollbar-width: thin;
+}
+.table-tab {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  max-width: 240px;
+  height: 37px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  color: #7c879a;
+}
+.table-tab:hover {
+  color: #5d47bd;
+  background: #f0edfd;
+}
+.table-tab.active {
+  color: #6042d2;
+  border-color: #dcd5f7;
+  background: #fff;
+  box-shadow: 0 -2px 8px #2d235410;
+}
+.table-tab-select {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 6px 0 12px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font-size: 11px;
+}
+.table-tab-select b {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.table-tab-close {
+  display: grid;
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  margin-right: 5px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  color: #9aa3b3;
+  background: transparent;
+  font-size: 16px;
+}
+.table-tab-close:hover,
+.table-tab-close:focus-visible {
+  color: #b44343;
+  background: #fff0f0;
+  outline: none;
+}
+.table-tab-empty {
+  flex: 1;
 }
 .table-toolbar {
   display: flex;
@@ -1865,6 +1948,32 @@ nav label,
 .publish-panel {
   background: #0f1728;
   border-color: #273247;
+}
+.table-tabs {
+  border-color: #273247;
+  background: #0f1728;
+  scrollbar-color: #45516a transparent;
+}
+.table-tab {
+  color: #8490a5;
+}
+.table-tab:hover {
+  color: #c0b5f5;
+  background: #211c3d;
+}
+.table-tab.active {
+  color: #c1b4ff;
+  border-color: #3a315f;
+  background: #121a2b;
+  box-shadow: 0 -2px 10px #0003;
+}
+.table-tab-close {
+  color: #768299;
+}
+.table-tab-close:hover,
+.table-tab-close:focus-visible {
+  color: #f09898;
+  background: #402329;
 }
 .table-search,
 .item-filter {

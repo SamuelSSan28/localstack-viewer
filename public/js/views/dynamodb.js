@@ -46,6 +46,7 @@ function readState() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     return {
       pinnedTables: Array.isArray(saved.pinnedTables) ? saved.pinnedTables : [],
+      openTables: Array.isArray(saved.openTables) ? saved.openTables : [],
       selectedTable: typeof saved.selectedTable === 'string' ? saved.selectedTable : '',
       tableSearch: typeof saved.tableSearch === 'string' ? saved.tableSearch : '',
       itemFilters:
@@ -58,6 +59,7 @@ function readState() {
   } catch {
     return {
       pinnedTables: [],
+      openTables: [],
       selectedTable: '',
       tableSearch: '',
       itemFilters: {},
@@ -521,6 +523,66 @@ function sortedTables(tables) {
   );
 }
 
+function openTableTab(tableName) {
+  if (!state.openTables.includes(tableName)) state.openTables.push(tableName);
+}
+
+function selectTable(container, tables, tableName) {
+  currentTable = tableName;
+  openTableTab(tableName);
+  state.selectedTable = tableName;
+  saveState();
+  renderTableList(container, tables);
+  renderTableTabs(container, tables);
+  loadItems(container, tableName);
+}
+
+function renderTableTabs(container, tables) {
+  const tabList = container.querySelector('#table-tabs');
+  if (!tabList) return;
+  state.openTables = state.openTables.filter((table) => tables.includes(table));
+  tabList.innerHTML = state.openTables
+    .map(
+      (table) =>
+        `<div class="table-tab ${table === currentTable ? 'active' : ''}" role="presentation"><button class="table-tab-select" role="tab" aria-selected="${table === currentTable}" data-tab-table="${escapeHtml(table)}" title="${escapeHtml(table)}"><span aria-hidden="true">▦</span><b>${escapeHtml(table)}</b></button><button class="table-tab-close" data-close-tab="${escapeHtml(table)}" aria-label="Close ${escapeHtml(table)} tab" title="Close tab">×</button></div>`,
+    )
+    .join('');
+  tabList.querySelector('.table-tab.active')?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'nearest',
+    inline: 'nearest',
+  });
+  tabList.querySelectorAll('[data-tab-table]').forEach(
+    (button) => (button.onclick = () => selectTable(container, tables, button.dataset.tabTable)),
+  );
+  tabList.querySelectorAll('[data-close-tab]').forEach(
+    (button) =>
+      (button.onclick = () => {
+        const table = button.dataset.closeTab;
+        const closingIndex = state.openTables.indexOf(table);
+        state.openTables = state.openTables.filter((name) => name !== table);
+        if (table !== currentTable) {
+          saveState();
+          renderTableTabs(container, tables);
+          return;
+        }
+        const nextTable =
+          state.openTables[Math.min(closingIndex, state.openTables.length - 1)] || '';
+        currentTable = nextTable;
+        state.selectedTable = nextTable;
+        saveState();
+        renderTableList(container, tables);
+        renderTableTabs(container, tables);
+        if (nextTable) loadItems(container, nextTable);
+        else {
+          stopAutoRefresh();
+          container.querySelector('#table-content').innerHTML =
+            '<div class="empty table-tab-empty"><b>No table open</b><span>Choose a table from the list to open it in a tab.</span></div>';
+        }
+      }),
+  );
+}
+
 function renderTableList(container, tables) {
   const list = container.querySelector('#table-options');
   const query = state.tableSearch.trim().toLocaleLowerCase();
@@ -535,9 +597,7 @@ function renderTableList(container, tables) {
   list.querySelectorAll('[data-table]').forEach(
     (button) =>
       (button.onclick = () => {
-        currentTable = button.dataset.table;
-        renderTableList(container, tables);
-        loadItems(container, button.dataset.table);
+        selectTable(container, tables, button.dataset.table);
       }),
   );
   list.querySelectorAll('[data-pin]').forEach(
@@ -563,10 +623,14 @@ export async function renderDynamo(container) {
     currentTable = tables.includes(state.selectedTable)
       ? state.selectedTable
       : sortedTables(tables)[0] || '';
-    container.innerHTML = `<div class="dynamo-page"><div class="page-head"><div><span class="eyebrow">DATABASE</span><h1>DynamoDB</h1><p>Inspect and manage items in a dedicated workspace for each table.</p></div><div class="dynamo-page-actions"><div class="auto-refresh-status" id="auto-refresh-status" hidden aria-live="polite"></div><button class="button secondary settings-button" id="open-refresh-settings" aria-haspopup="dialog"><span aria-hidden="true">⚙</span> Auto-refresh</button></div></div><section class="dynamo-layout"><aside class="table-list"><label>TABLES</label><div class="table-search"><span>⌕</span><input id="table-search" type="search" placeholder="Search tables…" value="${escapeHtml(state.tableSearch)}" aria-label="Search tables"></div><div id="table-options"></div></aside><div id="table-content"><div class="empty"><b>Select a table</b></div></div></section></div>
+    state.openTables = state.openTables.filter((table) => tables.includes(table));
+    if (currentTable) openTableTab(currentTable);
+    saveState();
+    container.innerHTML = `<div class="dynamo-page"><div class="page-head"><div><span class="eyebrow">DATABASE</span><h1>DynamoDB</h1><p>Inspect and manage items in a dedicated workspace for each table.</p></div><div class="dynamo-page-actions"><div class="auto-refresh-status" id="auto-refresh-status" hidden aria-live="polite"></div><button class="button secondary settings-button" id="open-refresh-settings" aria-haspopup="dialog"><span aria-hidden="true">⚙</span> Auto-refresh</button></div></div><section class="dynamo-layout"><aside class="table-list"><label>TABLES</label><div class="table-search"><span>⌕</span><input id="table-search" type="search" placeholder="Search tables…" value="${escapeHtml(state.tableSearch)}" aria-label="Search tables"></div><div id="table-options"></div></aside><div class="table-workspace"><div class="table-tabs" id="table-tabs" role="tablist" aria-label="Open DynamoDB tables"></div><div id="table-content"><div class="empty"><b>Select a table</b></div></div></div></section></div>
       <dialog id="refresh-settings" class="settings-dialog"><div class="dialog-head"><div><span class="eyebrow">DYNAMODB SETTINGS</span><h2>Auto-refresh tables</h2><p>Keep the selected table up to date while this page is open.</p></div><button class="icon-button dialog-x" id="refresh-settings-x" aria-label="Close">×</button></div><form id="refresh-settings-form"><label class="toggle-setting" for="auto-refresh-enabled"><span><b>Enable auto-refresh</b><small>Refreshes the active table without interrupting your view.</small></span><input type="checkbox" id="auto-refresh-enabled" ${state.autoRefresh.enabled ? 'checked' : ''}><span class="toggle-control" aria-hidden="true"></span></label><label class="interval-setting" for="auto-refresh-interval"><span>Refresh frequency</span><select id="auto-refresh-interval" aria-label="Auto-refresh frequency">${AUTO_REFRESH_INTERVALS.map((minutes) => `<option value="${minutes}" ${state.autoRefresh.intervalMinutes === minutes ? 'selected' : ''}>Every ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}</option>`).join('')}</select></label><div class="settings-note"><span aria-hidden="true">ⓘ</span><p>This preference applies to all DynamoDB tables and is saved in this browser.</p></div><div class="dialog-actions"><button type="button" class="button secondary" id="refresh-settings-cancel">Cancel</button><button type="submit" class="button primary">Save settings</button></div></form></dialog>
       <dialog id="editor"><div class="dialog-head"><div><span class="eyebrow">DYNAMODB</span><h2 id="editor-title">Item details</h2></div><button class="icon-button dialog-x" id="dialog-x" aria-label="Close">×</button></div><div class="json-editor-head"><label for="item-json">JSON item</label><div class="editor-tools"><button class="button secondary" id="copy-item">▣ Copy all</button><button class="button secondary" id="edit-item">✎ Edit</button></div></div><textarea id="item-json" class="item-json-editor" spellcheck="false" readonly></textarea><p class="hint" id="editor-hint">JSON values are automatically converted to DynamoDB types.</p><div class="dialog-actions"><button class="button secondary" id="back-to-view" hidden>Back to view</button><button class="button secondary" id="editor-close">Close</button><button class="button primary" id="save-item" hidden>Save item</button></div></dialog>`;
     renderTableList(container, tables);
+    renderTableTabs(container, tables);
     container.querySelector('#table-search').oninput = (event) => {
       state.tableSearch = event.target.value;
       saveState();
