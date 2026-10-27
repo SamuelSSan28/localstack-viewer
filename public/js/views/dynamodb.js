@@ -16,6 +16,7 @@ let state;
 let autoRefreshTimer;
 let autoRefreshCountdownTimer;
 let nextAutoRefreshAt = 0;
+const tableViews = new Map();
 
 export const AUTO_REFRESH_INTERVALS = [1, 2, 5, 10, 15, 30];
 
@@ -92,10 +93,12 @@ function updateAutoRefreshStatus(container) {
   status.innerHTML = `<span></span>Auto-refresh in ${minutes}:${remainder}`;
 }
 
-function scheduleAutoRefresh(container) {
+function scheduleAutoRefresh(container, refreshAt = 0) {
   stopAutoRefresh();
   if (!state.autoRefresh.enabled || !currentTable || !container.isConnected) return;
-  const delay = state.autoRefresh.intervalMinutes * 60 * 1000;
+  const delay = refreshAt
+    ? Math.max(0, refreshAt - Date.now())
+    : state.autoRefresh.intervalMinutes * 60 * 1000;
   nextAutoRefreshAt = Date.now() + delay;
   updateAutoRefreshStatus(container);
   autoRefreshCountdownTimer = setInterval(() => updateAutoRefreshStatus(container), 1000);
@@ -492,15 +495,15 @@ async function loadItems(container, tableName, { quiet = false, preserveView = f
   currentTable = tableName;
   state.selectedTable = tableName;
   saveState();
-  if (!preserveView) {
-    selectedRows.clear();
-    currentPage = 1;
-  }
   const area = container.querySelector('#table-content');
-  if (!quiet) showLoading(area, `Reading ${tableName}…`);
+  if (!quiet && !tableData) showLoading(area, `Reading ${tableName}…`);
   try {
     const data = await api.table(tableName);
     if (generation !== loadGeneration || currentTable !== tableName) return;
+    if (!preserveView) {
+      selectedRows = new Set();
+      currentPage = 1;
+    }
     tableData = data;
     renderItems(container, tableName);
     scheduleAutoRefresh(container);
@@ -527,14 +530,55 @@ function openTableTab(tableName) {
   if (!state.openTables.includes(tableName)) state.openTables.push(tableName);
 }
 
+function rememberTableView(container) {
+  if (!currentTable || !tableData) return;
+  const area = container.querySelector('#table-content');
+  tableViews.set(currentTable, {
+    data: tableData,
+    page: currentPage,
+    selection: selectedRows,
+    nodes: [...area.childNodes],
+    scroll: [...area.querySelectorAll('.table-scroll')].map((element) => ({
+      element,
+      top: element.scrollTop,
+      left: element.scrollLeft,
+    })),
+    refreshAt: nextAutoRefreshAt,
+  });
+}
+
+function activateTable(container, tableName) {
+  loadGeneration += 1;
+  stopAutoRefresh();
+  currentTable = tableName;
+  const saved = tableViews.get(tableName);
+  if (!saved) {
+    tableData = undefined;
+    selectedRows = new Set();
+    currentPage = 1;
+    return loadItems(container, tableName);
+  }
+  tableData = saved.data;
+  currentPage = saved.page;
+  selectedRows = saved.selection;
+  container.querySelector('#table-content').replaceChildren(...saved.nodes);
+  saved.scroll.forEach(({ element, top, left }) => {
+    element.scrollTop = top;
+    element.scrollLeft = left;
+  });
+  scheduleAutoRefresh(container, saved.refreshAt);
+}
+
 function selectTable(container, tables, tableName) {
+  if (currentTable === tableName) return;
+  rememberTableView(container);
   currentTable = tableName;
   openTableTab(tableName);
   state.selectedTable = tableName;
   saveState();
   renderTableList(container, tables);
   renderTableTabs(container, tables);
-  loadItems(container, tableName);
+  activateTable(container, tableName);
 }
 
 function renderTableTabs(container, tables) {
@@ -561,6 +605,7 @@ function renderTableTabs(container, tables) {
         const table = button.dataset.closeTab;
         const closingIndex = state.openTables.indexOf(table);
         state.openTables = state.openTables.filter((name) => name !== table);
+        tableViews.delete(table);
         if (table !== currentTable) {
           saveState();
           renderTableTabs(container, tables);
@@ -573,8 +618,10 @@ function renderTableTabs(container, tables) {
         saveState();
         renderTableList(container, tables);
         renderTableTabs(container, tables);
-        if (nextTable) loadItems(container, nextTable);
+        if (nextTable) activateTable(container, nextTable);
         else {
+          loadGeneration += 1;
+          tableData = undefined;
           stopAutoRefresh();
           container.querySelector('#table-content').innerHTML =
             '<div class="empty table-tab-empty"><b>No table open</b><span>Choose a table from the list to open it in a tab.</span></div>';
@@ -614,6 +661,8 @@ function renderTableList(container, tables) {
 }
 
 export async function renderDynamo(container) {
+  tableViews.clear();
+  tableData = undefined;
   stopAutoRefresh();
   loadGeneration += 1;
   state = readState();
@@ -654,6 +703,9 @@ export async function renderDynamo(container) {
       state.autoRefresh = normalizeAutoRefresh({
         enabled: enabledInput.checked,
         intervalMinutes: intervalInput.value,
+      });
+      tableViews.forEach((view) => {
+        view.refreshAt = 0;
       });
       saveState();
       refreshSettings.close();
